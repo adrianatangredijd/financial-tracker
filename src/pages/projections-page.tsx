@@ -17,7 +17,7 @@ import {
 } from '@mui/x-data-grid'
 import { useEffect, useMemo, useState } from 'react'
 
-import { MetricCard, PageHeader, SectionCard, StateNotice } from '@/components/ui'
+import { MetricCard, MetricCardSkeleton, PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
 import {
   useCreateProjectionMutation,
@@ -223,21 +223,31 @@ export function ProjectionsPage() {
       />
 
       <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }}>
-        <MetricCard
-          label="Projected Revenue"
-          value={formatCurrency(totals.revenue)}
-          helper="Combined projected revenue across all forecast months."
-        />
-        <MetricCard
-          label="Projected Outflows"
-          value={formatCurrency(totals.costs)}
-          helper="Projected job costs plus projected overhead."
-        />
-        <MetricCard
-          label="Ending Cash"
-          value={formatCurrency(totals.endingCash)}
-          helper="Latest rolling cash balance from the forecast series."
-        />
+        {projectionsQuery.isLoading ? (
+          <>
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              label="Projected Revenue"
+              value={formatCurrency(totals.revenue)}
+              helper="Combined projected revenue across all forecast months."
+            />
+            <MetricCard
+              label="Projected Outflows"
+              value={formatCurrency(totals.costs)}
+              helper="Projected job costs plus projected overhead."
+            />
+            <MetricCard
+              label="Ending Cash"
+              value={formatCurrency(totals.endingCash)}
+              helper="Latest rolling cash balance from the forecast series."
+            />
+          </>
+        )}
       </Box>
 
       <Box
@@ -250,9 +260,7 @@ export function ProjectionsPage() {
           description="Monthly forecast entries returned by the backend projection service."
         >
           {projectionsQuery.isLoading ? (
-            <Typography color="text.secondary" variant="body2">
-              Loading projections...
-            </Typography>
+            <TableSkeleton />
           ) : projectionsQuery.isError ? (
             <StateNotice
               title="Projections unavailable"

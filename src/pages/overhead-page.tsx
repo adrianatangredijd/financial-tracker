@@ -17,7 +17,7 @@ import {
 } from '@mui/x-data-grid'
 import { useEffect, useMemo, useState } from 'react'
 
-import { ConfirmDialog, MetricCard, PageHeader, SectionCard, StateNotice } from '@/components/ui'
+import { ConfirmDialog, MetricCard, MetricCardSkeleton, PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
 import {
   useCreateOverheadMutation,
@@ -169,21 +169,31 @@ export function OverheadPage() {
       />
 
       <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }}>
-        <MetricCard
-          label="Monthly Total"
-          value={formatCurrency(overheadQuery.data?.summary.monthly_total ?? 0)}
-          helper="Current month company overhead."
-        />
-        <MetricCard
-          label="Yearly Total"
-          value={formatCurrency(overheadQuery.data?.summary.yearly_total ?? 0)}
-          helper="Year-to-date operating expense."
-        />
-        <MetricCard
-          label="Entries"
-          value={String(items.length)}
-          helper="Recorded overhead expense items."
-        />
+        {overheadQuery.isLoading ? (
+          <>
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              label="Monthly Total"
+              value={formatCurrency(overheadQuery.data?.summary.monthly_total ?? 0)}
+              helper="Current month company overhead."
+            />
+            <MetricCard
+              label="Yearly Total"
+              value={formatCurrency(overheadQuery.data?.summary.yearly_total ?? 0)}
+              helper="Year-to-date operating expense."
+            />
+            <MetricCard
+              label="Entries"
+              value={String(items.length)}
+              helper="Recorded overhead expense items."
+            />
+          </>
+        )}
       </Box>
 
       <Box
@@ -196,9 +206,7 @@ export function OverheadPage() {
           description="Monitor software, insurance, vehicles, utilities, and other company expenses."
         >
           {overheadQuery.isLoading ? (
-            <Typography color="text.secondary" variant="body2">
-              Loading overhead expenses...
-            </Typography>
+            <TableSkeleton />
           ) : overheadQuery.isError ? (
             <StateNotice
               title="Overhead unavailable"

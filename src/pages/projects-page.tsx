@@ -19,7 +19,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 
-import { ConfirmDialog, PageHeader, SectionCard, StateNotice, StatusBadge } from '@/components/ui'
+import { ConfirmDialog, PageHeader, SectionCard, StateNotice, StatusBadge, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
 import {
   useCreateProjectMutation,
@@ -330,9 +330,7 @@ export function ProjectsPage() {
           description="Review financial performance and open any project for deeper cost and payment detail."
         >
           {projectsQuery.isLoading ? (
-            <Typography color="text.secondary" variant="body2">
-              Loading projects...
-            </Typography>
+            <TableSkeleton rows={5} height={640} />
           ) : projectsQuery.isError ? (
             <StateNotice
               title="Projects unavailable"

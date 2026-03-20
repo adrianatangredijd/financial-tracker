@@ -17,7 +17,7 @@ import {
 } from '@mui/x-data-grid'
 import { useEffect, useMemo, useState } from 'react'
 
-import { ConfirmDialog, MetricCard, PageHeader, SectionCard, StateNotice } from '@/components/ui'
+import { ConfirmDialog, MetricCard, MetricCardSkeleton, PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
 import {
   useCreateJobCostMutation,
@@ -189,21 +189,31 @@ export function JobCostsPage() {
       />
 
       <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }}>
-        <MetricCard
-          label="Total Job Costs"
-          value={formatCurrency(totalCost)}
-          helper="All direct costs currently recorded."
-        />
-        <MetricCard
-          label="Average Entry"
-          value={formatCurrency(averageCost)}
-          helper="Average cost amount per ledger item."
-        />
-        <MetricCard
-          label="Projects Impacted"
-          value={String(activeProjects)}
-          helper="Distinct projects with recorded job costs."
-        />
+        {jobCostsQuery.isLoading ? (
+          <>
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              label="Total Job Costs"
+              value={formatCurrency(totalCost)}
+              helper="All direct costs currently recorded."
+            />
+            <MetricCard
+              label="Average Entry"
+              value={formatCurrency(averageCost)}
+              helper="Average cost amount per ledger item."
+            />
+            <MetricCard
+              label="Projects Impacted"
+              value={String(activeProjects)}
+              helper="Distinct projects with recorded job costs."
+            />
+          </>
+        )}
       </Box>
 
       <Box
@@ -216,9 +226,7 @@ export function JobCostsPage() {
           description="Direct materials, labor, equipment, permits, and subcontractor spend."
         >
           {jobCostsQuery.isLoading ? (
-            <Typography color="text.secondary" variant="body2">
-              Loading job costs...
-            </Typography>
+            <TableSkeleton />
           ) : jobCostsQuery.isError ? (
             <StateNotice
               title="Job costs unavailable"

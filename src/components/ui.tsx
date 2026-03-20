@@ -15,6 +15,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Skeleton,
   Stack,
   Typography,
   useMediaQuery,
@@ -256,6 +257,50 @@ export function StateNotice({
         </Stack>
       </CardContent>
     </Card>
+  )
+}
+
+export function MetricCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader
+        subheader={<Skeleton width="60%" />}
+        title={<Skeleton width="45%" height={32} />}
+      />
+      <CardContent sx={{ pt: 0 }}>
+        <Skeleton width="80%" />
+      </CardContent>
+    </Card>
+  )
+}
+
+export function TableSkeleton({ rows = 6, height = 620 }: { rows?: number; height?: number }) {
+  return (
+    <Box sx={{ height, width: '100%' }}>
+      <Skeleton variant="rectangular" width="100%" height={52} sx={{ borderRadius: 1 }} />
+      <Stack spacing={0} mt={0.5}>
+        {Array.from({ length: rows }).map((_, index) => (
+          <Box
+            key={index}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            px={2}
+            sx={{
+              height: 52,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Skeleton width="25%" height={20} />
+            <Skeleton width="20%" height={20} />
+            <Skeleton width="15%" height={20} />
+            <Skeleton width="20%" height={20} />
+            <Skeleton width="10%" height={20} />
+          </Box>
+        ))}
+      </Stack>
+    </Box>
   )
 }
 
