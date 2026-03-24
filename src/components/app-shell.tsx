@@ -6,6 +6,7 @@ import {
   ChevronRight as ExpandIcon,
   Dashboard as DashboardIcon,
   Folder as ProjectsIcon,
+  ReceiptLong as LogExpenseIcon,
   Menu as MenuIcon,
 } from '@mui/icons-material'
 import {
@@ -34,6 +35,7 @@ import { navigationWidths } from '@/theme'
 
 const icons = {
   Dashboard: DashboardIcon,
+  'Log Expense': LogExpenseIcon,
   Projects: ProjectsIcon,
   'Job Costs': JobCostsIcon,
   Overhead: OverheadIcon,

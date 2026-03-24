@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/app-shell'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { JobCostsPage } from '@/pages/job-costs-page'
+import { LogExpensePage } from '@/pages/log-expense-page'
 import { OverheadPage } from '@/pages/overhead-page'
 import { ProjectDetailPage } from '@/pages/project-detail-page'
 import { ProjectsPage } from '@/pages/projects-page'
@@ -13,6 +14,7 @@ export function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route element={<DashboardPage />} path="/" />
+        <Route element={<LogExpensePage />} path="/log-expense" />
         <Route element={<ProjectsPage />} path="/projects" />
         <Route element={<ProjectDetailPage />} path="/projects/:id" />
         <Route element={<JobCostsPage />} path="/job-costs" />

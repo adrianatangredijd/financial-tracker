@@ -36,6 +36,8 @@ describe('ProjectsPage', () => {
           client_name: 'Acme Homes',
           project_address: '101 Main Street',
           contract_value: 85000,
+          job_cost_budget: 50000,
+          milestone_percent: 65,
           start_date: '2026-01-10',
           estimated_end_date: '2026-03-15',
           status: 'active',
@@ -72,13 +74,14 @@ describe('ProjectsPage', () => {
 
     renderWithProviders(<ProjectsPage />)
 
-    expect(screen.getByRole('grid')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search projects...')).toBeInTheDocument()
     expect(screen.getByText('Kitchen Remodel')).toBeInTheDocument()
     expect(screen.getByText('Acme Homes')).toBeInTheDocument()
     expect(screen.getByText('$85,000')).toBeInTheDocument()
     expect(screen.getByText('$30,000')).toBeInTheDocument()
-    expect(screen.getByText('$18,000')).toBeInTheDocument()
-    expect(screen.getByText('60.0%')).toBeInTheDocument()
+    expect(screen.getByText('65%')).toBeInTheDocument()
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
   })
 
   it('hides lower-priority table columns on mobile widths', () => {
@@ -86,9 +89,9 @@ describe('ProjectsPage', () => {
 
     renderWithProviders(<ProjectsPage />)
 
-    expect(screen.getByRole('grid')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Client' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Costs' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Address' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Project' })).toBeInTheDocument()
   })
 
@@ -96,6 +99,8 @@ describe('ProjectsPage', () => {
     window.resizeTo(1280, 900)
 
     renderWithProviders(<ProjectsPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Project' }))
 
     fireEvent.change(screen.getByLabelText(/Project name/i, { selector: 'input' }), {
       target: { value: 'Office Refresh' },
@@ -108,6 +113,12 @@ describe('ProjectsPage', () => {
     })
     fireEvent.change(screen.getByLabelText(/Contract value/i, { selector: 'input' }), {
       target: { value: '95000' },
+    })
+    fireEvent.change(screen.getByLabelText(/Job cost budget/i, { selector: 'input' }), {
+      target: { value: '64000' },
+    })
+    fireEvent.change(screen.getByLabelText(/Milestone progress %/i, { selector: 'input' }), {
+      target: { value: '35' },
     })
     fireEvent.change(screen.getByLabelText(/Status/i, { selector: 'select' }), {
       target: { value: 'planning' },
@@ -127,6 +138,8 @@ describe('ProjectsPage', () => {
       client_name: 'Northwind',
       project_address: '88 Market Street',
       contract_value: 95000,
+      job_cost_budget: 64000,
+      milestone_percent: 35,
       start_date: '2026-04-01',
       estimated_end_date: '2026-06-30',
       status: 'planning',

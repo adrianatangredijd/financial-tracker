@@ -1,247 +1,488 @@
-import { ArrowOutward } from '@mui/icons-material'
-import { Alert, Box, Button, Chip, Divider, Stack, Typography } from '@mui/material'
-import { Link as RouterLink } from 'react-router-dom'
+import { Box, Chip, Container, Divider, Grid, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, useTheme } from '@mui/material'
+import { DataGrid, type GridColDef } from '@mui/x-data-grid'
+import { BarChart, LineChart } from '@mui/x-charts'
 
-import {
-  BudgetActualChartPanel,
-  ComparisonBarChartPanel,
-  LineChartPanel,
-  ValueBarChartPanel,
-} from '@/components/charts'
-import {
-  DashboardCrossCheckList,
-  DashboardHeroMetricCard,
-  DashboardProjectList,
-  DashboardProjectListItem,
-  MetricCard,
-  PageHeader,
-  SectionCard,
-  StateNotice,
-  StatusBadge,
-} from '@/components/ui'
+import { MetricCard, PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
-import { useDashboardQuery } from '@/lib/api/hooks'
-import { formatCurrency, formatDate, formatDecimal, formatPercent } from '@/lib/utils'
+import {
+  useDashboardQuery,
+  useJobCostsQuery,
+  useOverheadQuery,
+  useProjectsQuery,
+  useProjectionsQuery,
+} from '@/lib/api/hooks'
+import type { DashboardProjectMargin } from '@/lib/api/types'
+import { formatCurrency, formatMonthLabel, formatPercent } from '@/lib/utils'
 
-export function DashboardPage() {
-  const dashboardQuery = useDashboardQuery()
+function BudgetStatusChip({ status }: { status: string }) {
+  return <Chip color={status === 'Over Budget' ? 'error' : 'success'} label={status} size="small" />
+}
 
-  if (dashboardQuery.isLoading) {
+function ProgressList({
+  rows,
+  progressLabel,
+}: {
+  rows: Array<{
+    id: string
+    name: string
+    budget: number
+    spent: number
+    progress_percent: number
+    status: string
+    budget_consumption_percent: number
+  }>
+  progressLabel: string
+}) {
+  if (rows.length === 0) {
     return (
-      <Box display="grid" gap={3}>
-        <PageHeader
-          title="Dashboard"
-          description="Track current cash position, revenue, cost pressure, and month-over-month trends."
-        />
-        <Box
-          display="grid"
-          gap={2}
-          gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(5, minmax(0, 1fr))' }}
-        >
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Box
-              key={index}
-              sx={{
-                animation: 'pulse 1.8s ease-in-out infinite',
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 3,
-                height: 144,
-              }}
-            />
-          ))}
-        </Box>
-      </Box>
+      <Typography color="text.secondary" variant="body2">
+        No projects available yet.
+      </Typography>
     )
   }
 
-  if (dashboardQuery.isError || !dashboardQuery.data) {
+  return (
+    <Stack divider={<Divider flexItem />} spacing={2}>
+      {rows.map((row) => {
+        const progressValue = Math.max(0, Math.min(row.budget_consumption_percent, 100))
+        return (
+          <Stack key={row.id} spacing={1.25}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1}>
+              <Box>
+                <Typography fontWeight={700} variant="body2">
+                  {row.name}
+                </Typography>
+                <Typography color="text.secondary" variant="caption">
+                  {formatCurrency(row.spent)} spent of {formatCurrency(row.budget)} budget
+                </Typography>
+              </Box>
+              <Stack alignItems={{ xs: 'flex-start', sm: 'flex-end' }} spacing={0.75}>
+                <BudgetStatusChip status={row.status} />
+                <Typography color="text.secondary" variant="caption">
+                  {progressLabel} {row.progress_percent.toFixed(0)}%
+                </Typography>
+              </Stack>
+            </Stack>
+            <LinearProgress
+              color={row.status === 'Over Budget' ? 'error' : 'success'}
+              sx={{ borderRadius: 999, height: 10 }}
+              value={progressValue}
+              variant="determinate"
+            />
+          </Stack>
+        )
+      })}
+    </Stack>
+  )
+}
+
+function CommandCenterTable({
+  headers,
+  rows,
+}: {
+  headers: string[]
+  rows: string[][]
+}) {
+  return (
+    <TableContainer>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            {headers.map((header) => (
+              <TableCell key={header} sx={{ fontWeight: 700 }}>
+                {header}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.map((row, index) => (
+            <TableRow key={`${row[0]}-${index}`} hover>
+              {row.map((cell, cellIndex) => (
+                <TableCell key={`${row[0]}-${index}-${cellIndex}`}>{cell}</TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  )
+}
+
+export function DashboardPage() {
+  const theme = useTheme()
+  const dashboardQuery = useDashboardQuery()
+  const projectsQuery = useProjectsQuery()
+  const jobCostsQuery = useJobCostsQuery()
+  const overheadQuery = useOverheadQuery()
+  const projectionsQuery = useProjectionsQuery()
+
+  if (
+    dashboardQuery.isLoading ||
+    projectsQuery.isLoading ||
+    jobCostsQuery.isLoading ||
+    overheadQuery.isLoading ||
+    projectionsQuery.isLoading
+  ) {
     return (
-      <Box display="grid" gap={3}>
-        <PageHeader
-          title="Dashboard"
-          description="Track current cash position, revenue, cost pressure, and month-over-month trends."
-        />
-        <StateNotice
-          title="Dashboard unavailable"
-          description={getApiErrorMessage(dashboardQuery.error)}
-        />
-      </Box>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Stack spacing={3}>
+          <PageHeader
+            title="Dashboard"
+            description="Financial command center for construction cash, project budgets, backlog, and validation."
+          />
+          <TableSkeleton rows={8} height={780} />
+        </Stack>
+      </Container>
+    )
+  }
+
+  if (
+    dashboardQuery.isError ||
+    projectsQuery.isError ||
+    jobCostsQuery.isError ||
+    overheadQuery.isError ||
+    projectionsQuery.isError ||
+    !dashboardQuery.data ||
+    !projectsQuery.data ||
+    !jobCostsQuery.data ||
+    !overheadQuery.data ||
+    !projectionsQuery.data
+  ) {
+    const error =
+      dashboardQuery.error ??
+      projectsQuery.error ??
+      jobCostsQuery.error ??
+      overheadQuery.error ??
+      projectionsQuery.error
+
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Stack spacing={3}>
+          <PageHeader
+            title="Dashboard"
+            description="Financial command center for construction cash, project budgets, backlog, and validation."
+          />
+          <StateNotice title="Dashboard unavailable" description={getApiErrorMessage(error)} />
+        </Stack>
+      </Container>
     )
   }
 
   const metrics = dashboardQuery.data
+  const projects = projectsQuery.data
+  const jobCosts = jobCostsQuery.data
+  const overhead = overheadQuery.data
+  const projections = projectionsQuery.data
+
+  const revenueExpenseLabels = metrics.revenue_vs_expenses.map((point) => formatMonthLabel(point.month))
+  const cashTrendLabels = metrics.cash_flow_trend.map((point) => formatMonthLabel(point.month))
+  const forecastLabels = metrics.cash_flow_forecast.map((point) => formatMonthLabel(point.month))
+
+  const grossMarginColumns: GridColDef<DashboardProjectMargin>[] = [
+    { field: 'project', headerName: 'Project', flex: 1.5, minWidth: 220 },
+    {
+      field: 'collected',
+      headerName: 'Collected',
+      minWidth: 140,
+      valueFormatter: (value) => formatCurrency(Number(value)),
+    },
+    {
+      field: 'costs',
+      headerName: 'Costs',
+      minWidth: 140,
+      valueFormatter: (value) => formatCurrency(Number(value)),
+    },
+    {
+      field: 'profit',
+      headerName: 'Profit',
+      minWidth: 140,
+      valueFormatter: (value) => formatCurrency(Number(value)),
+    },
+    {
+      field: 'margin_percent',
+      headerName: 'Margin %',
+      minWidth: 120,
+      valueFormatter: (value) => `${Number(value).toFixed(1)}%`,
+    },
+  ]
 
   return (
-    <Box display="grid" gap={3}>
-      <PageHeader
-        title="Dashboard"
-        description="Real-time from your records."
-      />
-
-      <Box
-        display="grid"
-        gap={2}
-        gridTemplateColumns={{ xs: '1fr', xl: 'minmax(0, 1.7fr) repeat(5, minmax(0, 1fr))' }}
-      >
-        <Box sx={{ gridColumn: { xs: 'auto', xl: 'span 2' } }}>
-          <DashboardHeroMetricCard
-            subtitle={`${formatCurrency(metrics.summary.starting_cash)} start + ${formatCurrency(metrics.summary.ytd_collections)} in - ${formatCurrency(metrics.summary.ytd_expenses)} out`}
-            title="Current Cash Balance"
-            value={formatCurrency(metrics.summary.current_cash)}
+    <Box sx={{ bgcolor: 'grey.50', minHeight: '100%' }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Stack spacing={3}>
+          <PageHeader
+            title="Dashboard"
+            description="Construction financial command center with dense visibility into cash, margins, backlog, budget health, and data validation."
           />
-        </Box>
-        <MetricCard
-          helper="Average runway using the most recent expense pace."
-          label="Months Runway"
-          value={formatDecimal(metrics.summary.months_runway)}
-        />
-        <MetricCard
-          helper="Collected revenue in the current calendar year."
-          label="YTD Collections"
-          value={formatCurrency(metrics.summary.ytd_collections)}
-        />
-        <MetricCard
-          helper="Job costs plus overhead in the current calendar year."
-          label="YTD Expenses"
-          value={formatCurrency(metrics.summary.ytd_expenses)}
-        />
-        <MetricCard
-          helper="Collections less direct job costs."
-          label="Gross Margin"
-          value={formatPercent(metrics.summary.gross_margin)}
-        />
-        <MetricCard
-          helper="Remaining contract value on planning and active work."
-          label="Backlog"
-          value={formatCurrency(metrics.summary.backlog)}
-        />
-      </Box>
 
-      <SectionCard title={`Today - ${formatDate(new Date().toISOString())}`}>
-        <Stack divider={<Divider flexItem />} spacing={2}>
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <Button component={RouterLink} startIcon={<ArrowOutward />} to="/job-costs" variant="contained">
-                Log job costs
-              </Button>
-              <Chip
-                label={`${metrics.today.active_project_count} active projects`}
-                sx={{ fontWeight: 600 }}
-                variant="outlined"
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+              <MetricCard
+                helper={`${projects.length} projects across the portfolio.`}
+                label="Current Cash"
+                value={formatCurrency(metrics.summary.current_cash)}
               />
-            </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <Button component={RouterLink} startIcon={<ArrowOutward />} to="/overhead" variant="outlined">
-                Log overhead
-              </Button>
-              <Chip
-                color={metrics.today.current_month_overhead_count > 0 ? 'primary' : 'default'}
-                label={
-                  metrics.today.current_month_overhead_count > 0
-                    ? `${metrics.today.current_month_overhead_count} this month`
-                    : 'None yet (OK if none)'
-                }
-                sx={{ fontWeight: 600 }}
-                variant="outlined"
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+              <MetricCard
+                helper={`${jobCosts.length} job cost entries posted.`}
+                label="Gross Profit"
+                value={formatCurrency(metrics.summary.gross_profit)}
               />
-            </Stack>
-          </Stack>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+              <MetricCard
+                helper={`${overhead.items.length} overhead entries logged.`}
+                label="Net Profit"
+                value={formatCurrency(metrics.summary.net_profit)}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+              <MetricCard
+                helper={`${projections.length} forecast month(s) loaded.`}
+                label="Backlog"
+                value={formatCurrency(metrics.summary.backlog)}
+              />
+            </Grid>
+          </Grid>
 
-          <Stack spacing={1}>
-            <Typography fontWeight={700} variant="body2">
-              Missing recent days
-            </Typography>
-            {metrics.today.missing_recent_days.length === 0 ? (
-              <Alert severity="success" variant="outlined">
-                No recent missing activity days detected.
-              </Alert>
-            ) : (
-              <Typography color="text.secondary" variant="body2">
-                Missing {metrics.today.missing_recent_days.length} recent day(s):{' '}
-                {metrics.today.missing_recent_days.map((day) => formatDate(day)).join(', ')}
-              </Typography>
-            )}
-          </Stack>
-        </Stack>
-      </SectionCard>
+          <SectionCard
+            description="Budget consumption and delivery progress for active and planning work."
+            title="Project Progress"
+          >
+            <ProgressList progressLabel="Progress" rows={metrics.project_progress} />
+          </SectionCard>
 
-      <SectionCard
-        actions={
-          <Button component={RouterLink} endIcon={<ArrowOutward />} to="/projects" variant="text">
-            View all
-          </Button>
-        }
-        description="Open work sorted by contract strength and current collected progress."
-        title="Active Projects"
-      >
-        <DashboardProjectList
-          emptyState="No active projects available yet."
-          items={metrics.active_projects.map((project) => (
-            <Box key={project.id}>
-              <DashboardProjectListItem
-                amountLabel={`${formatCurrency(project.collected_revenue)} / ${formatCurrency(project.contract_value)}`}
-                progressLabel={`${Math.round(project.progress_percent)}% collected`}
-                progressValue={project.progress_percent}
-                title={project.name}
+          <SectionCard
+            description="Historical cash position against projected ending cash by month."
+            title="12-Month Cash Flow Forecast"
+          >
+            <Box sx={{ height: 360 }}>
+              <LineChart
+                height={360}
+                margin={{ bottom: 24, left: 72, right: 24, top: 16 }}
+                series={[
+                  {
+                    label: 'Actual Cash',
+                    data: metrics.cash_flow_forecast.map((point) => point.actual_cash ?? null),
+                    color: theme.palette.primary.main,
+                  },
+                  {
+                    label: 'Projected Cash',
+                    data: metrics.cash_flow_forecast.map((point) => point.projected_cash ?? null),
+                    color: theme.palette.warning.main,
+                  },
+                ]}
+                xAxis={[{ scaleType: 'point', data: forecastLabels }]}
               />
-              <Stack direction="row" justifyContent="space-between" pb={1}>
-                <StatusBadge value={project.status} />
-                <Button
-                  component={RouterLink}
-                  endIcon={<ArrowOutward />}
-                  size="small"
-                  to={`/projects/${project.id}`}
-                  variant="text"
-                >
-                  Open
-                </Button>
-              </Stack>
             </Box>
-          ))}
-        />
-      </SectionCard>
+          </SectionCard>
 
-      <Box display="grid" gap={3} gridTemplateColumns={{ xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }}>
-        <ComparisonBarChartPanel
-          data={metrics.revenue_vs_expenses}
-          description="Monthly collections against direct and overhead spend."
-          title="Revenue vs Expenses"
-        />
-        <LineChartPanel
-          title="Cash Flow Trend"
-          description="Running net cash based on monthly inflows minus outflows."
-          data={metrics.cash_flow_trend}
-        />
-      </Box>
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, lg: 6 }}>
+              <SectionCard title="Profit & Loss Statement">
+                <Stack divider={<Divider flexItem />} spacing={1.5}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Revenue (Collections)</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.profit_loss.revenue)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Job Costs (COGS)</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.profit_loss.job_costs)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Gross Profit</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.profit_loss.gross_profit)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Overhead</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.profit_loss.overhead)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Net Profit</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.profit_loss.net_profit)}</Typography>
+                  </Stack>
+                </Stack>
+              </SectionCard>
+            </Grid>
+            <Grid size={{ xs: 12, lg: 6 }}>
+              <SectionCard title="Break-Even Analysis">
+                <Stack divider={<Divider flexItem />} spacing={1.5}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Monthly overhead</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.break_even.monthly_overhead)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Break-even point</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.break_even.break_even_point)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Revenue run rate</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.break_even.revenue_run_rate)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Surplus</Typography>
+                    <Typography fontWeight={700}>{formatCurrency(metrics.break_even.surplus)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Coverage ratio</Typography>
+                    <Typography fontWeight={700}>{formatPercent(metrics.break_even.coverage_ratio)}</Typography>
+                  </Stack>
+                </Stack>
+              </SectionCard>
+            </Grid>
+          </Grid>
 
-      <Box display="grid" gap={3} gridTemplateColumns={{ xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }}>
-        <ValueBarChartPanel
-          data={metrics.gross_margin_by_project}
-          description="Project gross margin percentage ranked from strongest to weakest."
-          title="Gross Margin by Project"
-          valueKind="percent"
-        />
-        <ValueBarChartPanel
-          data={metrics.backlog_by_project}
-          description="Remaining contract value on open work, ranked by pipeline strength."
-          title="Backlog - Pipeline Strength"
-        />
-      </Box>
+          <SectionCard
+            description="Direct-cost budget consumption across the portfolio."
+            title="Job Cost Health"
+          >
+            <ProgressList progressLabel="Milestone" rows={metrics.job_cost_health} />
+          </SectionCard>
 
-      <BudgetActualChartPanel
-        data={metrics.ytd_budget_vs_actual}
-        description="Monthly net cash budget from projections compared with actual monthly net cash."
-        title="YTD Budget vs Actual"
-      />
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, xl: 6 }}>
+              <SectionCard title="Revenue vs Expenses" description="Monthly collections compared with total monthly spend.">
+                <Box sx={{ height: 340 }}>
+                  <BarChart
+                    height={340}
+                    margin={{ bottom: 24, left: 72, right: 24, top: 16 }}
+                    series={[
+                      {
+                        label: 'Revenue',
+                        data: metrics.revenue_vs_expenses.map((point) => point.revenue),
+                        color: theme.palette.primary.main,
+                      },
+                      {
+                        label: 'Expenses',
+                        data: metrics.revenue_vs_expenses.map((point) => point.expenses),
+                        color: theme.palette.error.light,
+                      },
+                    ]}
+                    xAxis={[{ scaleType: 'band', data: revenueExpenseLabels }]}
+                  />
+                </Box>
+              </SectionCard>
+            </Grid>
+            <Grid size={{ xs: 12, xl: 6 }}>
+              <SectionCard title="Cash Flow Trend" description="Running net cash based on monthly inflows minus outflows.">
+                <Box sx={{ height: 340 }}>
+                  <LineChart
+                    height={340}
+                    margin={{ bottom: 24, left: 72, right: 24, top: 16 }}
+                    series={[
+                      {
+                        label: 'Cash Flow Trend',
+                        data: metrics.cash_flow_trend.map((point) => point.amount),
+                        color: theme.palette.success.main,
+                      },
+                    ]}
+                    xAxis={[{ scaleType: 'point', data: cashTrendLabels }]}
+                  />
+                </Box>
+              </SectionCard>
+            </Grid>
+          </Grid>
 
-      <SectionCard
-        description="Operational alerts that help you sanity-check project and cash records."
-        title="Data Cross-Check"
-      >
-        <DashboardCrossCheckList items={metrics.cross_checks} />
-      </SectionCard>
+          <SectionCard
+            description="Collected revenue, job costs, and gross margin by project."
+            title="Gross Margin by Project"
+          >
+            <Box sx={{ height: 420, width: '100%' }}>
+              <DataGrid
+                columns={grossMarginColumns}
+                disableRowSelectionOnClick
+                hideFooter
+                rows={metrics.gross_margin_by_project.map((row) => ({ ...row, id: row.project }))}
+                sx={{ border: 0 }}
+              />
+            </Box>
+          </SectionCard>
+
+          <SectionCard
+            description="Contracted value, billed progress, and remaining pipeline by project."
+            title="Backlog / Pipeline"
+          >
+            <Stack spacing={3}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <MetricCard
+                    helper="Open contract value in planning and active work."
+                    label="Total Contracted"
+                    value={formatCurrency(metrics.backlog_pipeline.summary.total_contracted)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <MetricCard
+                    helper="Collected to date across open work."
+                    label="Collected"
+                    value={formatCurrency(metrics.backlog_pipeline.summary.collected)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <MetricCard
+                    helper="Remaining contract value still to be billed."
+                    label="Remaining"
+                    value={formatCurrency(metrics.backlog_pipeline.summary.remaining)}
+                  />
+                </Grid>
+              </Grid>
+              <CommandCenterTable
+                headers={['Project', 'Contract', 'Remaining', '% Billed', 'Milestone %']}
+                rows={metrics.backlog_pipeline.items.map((item) => [
+                  item.project,
+                  formatCurrency(item.contract),
+                  formatCurrency(item.remaining),
+                  `${item.billed_percent.toFixed(0)}%`,
+                  `${item.milestone_percent.toFixed(0)}%`,
+                ])}
+              />
+            </Stack>
+          </SectionCard>
+
+          <SectionCard
+            description="Budget targets compared with actual company performance."
+            title="Budget vs Actual"
+          >
+            <CommandCenterTable
+              headers={['Metric', 'Budget', 'Actual', 'Variance']}
+              rows={metrics.budget_vs_actual.map((item) => [
+                item.metric,
+                formatCurrency(item.budget),
+                formatCurrency(item.actual),
+                formatCurrency(item.variance),
+              ])}
+            />
+          </SectionCard>
+
+          <SectionCard
+            description="Source-level validation across collections, overhead, and job costs by month."
+            title="Data Cross-Check"
+          >
+            <CommandCenterTable
+              headers={[
+                'Month',
+                'Collections (Actual)',
+                'Collections (Payments)',
+                'Overhead (Actual)',
+                'Overhead (Logs)',
+                'Job Costs (Actual)',
+                'Job Costs (Expected)',
+              ]}
+              rows={metrics.data_cross_check.map((item) => [
+                formatMonthLabel(item.month),
+                formatCurrency(item.collections_actual),
+                formatCurrency(item.collections_payments),
+                formatCurrency(item.overhead_actual),
+                formatCurrency(item.overhead_logs),
+                formatCurrency(item.job_costs_actual),
+                formatCurrency(item.job_costs_expected),
+              ])}
+            />
+          </SectionCard>
+        </Stack>
+      </Container>
     </Box>
   )
 }

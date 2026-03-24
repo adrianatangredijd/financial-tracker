@@ -10,10 +10,15 @@ import type {
   DashboardMetrics,
   JobCost,
   JobCostPayload,
+  LogExpensePayload,
+  LogExpenseResult,
   OverheadExpense,
   OverheadList,
   OverheadPayload,
   PaymentPayload,
+  ProjectionPlanner,
+  ProjectionPlannerRow,
+  ProjectionPlannerRowPayload,
   Projection,
   ProjectionPayload,
   Project,
@@ -24,6 +29,7 @@ import type {
 
 export const queryKeys = {
   dashboard: ['dashboard'] as const,
+  logExpense: ['log-expense'] as const,
   projects: ['projects'] as const,
   projectDetail: (projectId: string) => ['projects', projectId] as const,
   payments: (projectId: string) => ['projects', projectId, 'payments'] as const,
@@ -207,10 +213,40 @@ export function useDeleteJobCostMutation() {
   })
 }
 
+export function useCreateLogExpenseMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: LogExpensePayload) =>
+      apiRequest<LogExpenseResult>({
+        method: 'POST',
+        url: '/log-expense',
+        data: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.jobCosts })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.overhead })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
 export function useOverheadQuery() {
   return useQuery({
     queryKey: queryKeys.overhead,
     queryFn: () => apiRequest<OverheadList>({ url: '/overhead' }),
+  })
+}
+
+export function useOverheadFilteredQuery(filters?: { year?: number; month?: number; group?: string }) {
+  return useQuery({
+    queryKey: [...queryKeys.overhead, filters ?? {}],
+    queryFn: () =>
+      apiRequest<OverheadList>({
+        url: '/overhead',
+        params: filters,
+      }),
   })
 }
 
@@ -248,10 +284,38 @@ export function useDeleteOverheadMutation() {
   })
 }
 
+export function useUpdateOverheadMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ expenseId, payload }: { expenseId: string; payload: OverheadPayload }) =>
+      apiRequest<OverheadExpense>({
+        method: 'PUT',
+        url: `/overhead/${expenseId}`,
+        data: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.overhead })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
 export function useProjectionsQuery() {
   return useQuery({
     queryKey: queryKeys.projections,
     queryFn: () => apiRequest<Projection[]>({ url: '/projections' }),
+  })
+}
+
+export function useProjectionPlannerQuery(year?: number) {
+  return useQuery({
+    queryKey: [...queryKeys.projections, 'planner', year ?? 'current'],
+    queryFn: () =>
+      apiRequest<ProjectionPlanner>({
+        url: '/projections/planner',
+        params: year ? { year } : undefined,
+      }),
   })
 }
 
@@ -298,6 +362,40 @@ export function useUpdateProjectionMutation(
     onSuccess: async (...args) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projections })
       await onSuccess?.(...args)
+    },
+  })
+}
+
+export function useCreateProjectionPlannerRowMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: ProjectionPlannerRowPayload) =>
+      apiRequest<ProjectionPlannerRow>({
+        method: 'POST',
+        url: '/projections/planner/rows',
+        data: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projections })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+  })
+}
+
+export function useUpdateProjectionPlannerRowMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ rowId, payload }: { rowId: string; payload: ProjectionPlannerRowPayload }) =>
+      apiRequest<ProjectionPlannerRow>({
+        method: 'PUT',
+        url: `/projections/planner/rows/${rowId}`,
+        data: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projections })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
     },
   })
 }

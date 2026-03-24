@@ -1,25 +1,32 @@
-import { DeleteOutline, EditOutlined, OpenInNew, PostAdd } from '@mui/icons-material'
+import { DeleteOutline, EditOutlined, PostAdd, Search, VisibilityOutlined } from '@mui/icons-material'
 import {
   Alert,
   Box,
   Button,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   IconButton,
+  InputAdornment,
+  LinearProgress,
   Snackbar,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import {
-  DataGrid,
-  type GridColDef,
-  type GridColumnVisibilityModel,
-} from '@mui/x-data-grid'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 
-import { ConfirmDialog, PageHeader, SectionCard, StateNotice, StatusBadge, TableSkeleton } from '@/components/ui'
+import { ConfirmDialog, PageHeader, StateNotice, StatusBadge, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
 import {
   useCreateProjectMutation,
@@ -29,13 +36,15 @@ import {
 } from '@/lib/api/hooks'
 import type { Project, ProjectPayload } from '@/lib/api/types'
 import { projectStatusOptions } from '@/lib/constants'
-import { formatCurrency, formatDate, formatPercent, toDateInputValue } from '@/lib/utils'
+import { formatCurrency, toDateInputValue } from '@/lib/utils'
 
 const emptyProjectPayload: ProjectPayload = {
   name: '',
   client_name: '',
   project_address: '',
   contract_value: 0,
+  job_cost_budget: 0,
+  milestone_percent: 0,
   start_date: '',
   estimated_end_date: '',
   status: 'planning',
@@ -52,6 +61,8 @@ function buildProjectPayload(project?: Project): ProjectPayload {
     client_name: project.client_name,
     project_address: project.project_address,
     contract_value: project.contract_value,
+    job_cost_budget: project.job_cost_budget,
+    milestone_percent: project.milestone_percent,
     start_date: toDateInputValue(project.start_date),
     estimated_end_date: toDateInputValue(project.estimated_end_date),
     status: project.status,
@@ -62,12 +73,12 @@ function buildProjectPayload(project?: Project): ProjectPayload {
 export function ProjectsPage() {
   const theme = useTheme()
   const isTabletUp = useMediaQuery(theme.breakpoints.up('md'))
-  const isDesktopUp = useMediaQuery(theme.breakpoints.up('lg'))
   const projectsQuery = useProjectsQuery()
   const createProjectMutation = useCreateProjectMutation({
     onSuccess: async () => {
       await projectsQuery.refetch()
       setEditingProject(null)
+      setIsFormOpen(false)
       setFormState(emptyProjectPayload)
       setFormMessage({
         severity: 'success',
@@ -79,6 +90,7 @@ export function ProjectsPage() {
     onSuccess: async () => {
       await projectsQuery.refetch()
       setEditingProject(null)
+      setIsFormOpen(false)
       setFormState(emptyProjectPayload)
       setFormMessage({
         severity: 'success',
@@ -89,9 +101,11 @@ export function ProjectsPage() {
   const deleteProjectMutation = useDeleteProjectMutation()
 
   const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [formState, setFormState] = useState<ProjectPayload>(emptyProjectPayload)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [searchValue, setSearchValue] = useState('')
   const [formMessage, setFormMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(
     null,
   )
@@ -103,31 +117,21 @@ export function ProjectsPage() {
       ),
     [projectsQuery.data],
   )
+  const filteredProjects = useMemo(() => {
+    const normalizedQuery = searchValue.trim().toLowerCase()
+    if (!normalizedQuery) {
+      return projects
+    }
+
+    return projects.filter((project) =>
+      [project.name, project.client_name, project.project_address].some((field) =>
+        field.toLowerCase().includes(normalizedQuery),
+      ),
+    )
+  }, [projects, searchValue])
 
   const mutationError =
     createProjectMutation.error ?? updateProjectMutation.error ?? deleteProjectMutation.error
-
-  const responsiveVisibilityModel = useMemo<GridColumnVisibilityModel>(
-    () => ({
-      client_name: isTabletUp,
-      total_revenue: isTabletUp,
-      total_job_costs: isDesktopUp,
-      profit: isDesktopUp,
-      profit_margin: isDesktopUp,
-      contract_value: true,
-      status: true,
-      actions: true,
-      name: true,
-    }),
-    [isDesktopUp, isTabletUp],
-  )
-
-  const [columnVisibilityModel, setColumnVisibilityModel] =
-    useState<GridColumnVisibilityModel>(responsiveVisibilityModel)
-
-  useEffect(() => {
-    setColumnVisibilityModel(responsiveVisibilityModel)
-  }, [responsiveVisibilityModel])
 
   function handleFieldChange<K extends keyof ProjectPayload>(field: K, value: ProjectPayload[K]) {
     setFormState((current) => ({ ...current, [field]: value }))
@@ -136,12 +140,15 @@ export function ProjectsPage() {
   function handleEdit(project: Project) {
     setEditingProject(project)
     setFormState(buildProjectPayload(project))
+    setValidationError(null)
+    setIsFormOpen(true)
   }
 
   function handleCancelEdit() {
     setEditingProject(null)
     setFormState(emptyProjectPayload)
     setValidationError(null)
+    setIsFormOpen(false)
   }
 
   async function handleDelete(projectId: string) {
@@ -172,6 +179,16 @@ export function ProjectsPage() {
       return
     }
 
+    if (!Number.isFinite(formState.job_cost_budget) || formState.job_cost_budget <= 0) {
+      setValidationError('Job cost budget must be greater than zero.')
+      return
+    }
+
+    if (!Number.isFinite(formState.milestone_percent) || formState.milestone_percent < 0 || formState.milestone_percent > 100) {
+      setValidationError('Milestone progress must be between 0 and 100.')
+      return
+    }
+
     try {
       if (editingProject) {
         await updateProjectMutation.mutateAsync({
@@ -190,193 +207,156 @@ export function ProjectsPage() {
     }
   }
 
-  const columns = useMemo<GridColDef<Project>[]>(
-    () => [
-      {
-        field: 'name',
-        flex: 1.4,
-        headerName: 'Project',
-        minWidth: 240,
-        renderCell: ({ row }) => (
-          <Box py={1}>
-            <Typography fontWeight={700} variant="body2">
-              {row.name}
-            </Typography>
-            <Typography color="text.secondary" variant="body2">
-              {row.project_address}
-            </Typography>
-            <Typography color="text.secondary" variant="caption">
-              Ends {formatDate(row.estimated_end_date)}
-            </Typography>
-          </Box>
-        ),
-      },
-      {
-        field: 'client_name',
-        flex: 1,
-        headerName: 'Client',
-        minWidth: 180,
-      },
-      {
-        field: 'status',
-        headerName: 'Status',
-        minWidth: 140,
-        renderCell: ({ value }) => <StatusBadge value={String(value)} />,
-      },
-      {
-        field: 'contract_value',
-        headerName: 'Contract',
-        minWidth: 140,
-        valueFormatter: (value) => formatCurrency(Number(value)),
-      },
-      {
-        field: 'total_revenue',
-        headerName: 'Revenue',
-        minWidth: 140,
-        valueFormatter: (value) => formatCurrency(Number(value)),
-      },
-      {
-        field: 'total_job_costs',
-        headerName: 'Costs',
-        minWidth: 140,
-        valueFormatter: (value) => formatCurrency(Number(value)),
-      },
-      {
-        field: 'profit',
-        headerName: 'Profit',
-        minWidth: 140,
-        valueFormatter: (value) => formatCurrency(Number(value)),
-      },
-      {
-        field: 'profit_margin',
-        headerName: 'Margin',
-        minWidth: 120,
-        valueFormatter: (value) => formatPercent(Number(value)),
-      },
-      {
-        field: 'actions',
-        disableColumnMenu: true,
-        filterable: false,
-        headerName: 'Actions',
-        minWidth: 180,
-        sortable: false,
-        renderCell: ({ row }) => (
-          <Stack direction="row" spacing={0.5}>
-            <IconButton
-              aria-label={`Open ${row.name}`}
-              color="primary"
-              component={RouterLink}
-              size="small"
-              to={`/projects/${row.id}`}
-            >
-              <OpenInNew fontSize="small" />
-            </IconButton>
-            <IconButton
-              aria-label={`Edit ${row.name}`}
-              color="primary"
-              size="small"
-              onClick={() => handleEdit(row)}
-            >
-              <EditOutlined fontSize="small" />
-            </IconButton>
-            <IconButton
-              aria-label={`Delete ${row.name}`}
-              color="error"
-              size="small"
-              onClick={() => setProjectToDelete(row)}
-            >
-              <DeleteOutline fontSize="small" />
-            </IconButton>
-          </Stack>
-        ),
-      },
-    ],
-    [],
-  )
-
   return (
     <Stack spacing={3}>
       <PageHeader
         title="Projects"
-        description="Manage active work, contract values, profitability, and project-level notes."
+        description="Track active jobs, milestone progress, collected revenue, and portfolio health."
         actions={
-          editingProject ? (
-            <Button fullWidth={!isTabletUp} variant="outlined" onClick={handleCancelEdit}>
-              Create new project
-            </Button>
-          ) : (
-            <Button
-              fullWidth={!isTabletUp}
-              startIcon={<PostAdd />}
-              variant="contained"
-              onClick={() => {
-                setEditingProject(null)
-                setFormState(emptyProjectPayload)
-              }}
-            >
-              New project
-            </Button>
-          )
+          <Button
+            fullWidth={!isTabletUp}
+            startIcon={<PostAdd />}
+            variant="contained"
+            onClick={() => {
+              setEditingProject(null)
+              setFormState(emptyProjectPayload)
+              setValidationError(null)
+              setIsFormOpen(true)
+            }}
+          >
+            New Project
+          </Button>
         }
       />
 
-      <Box
-        display="grid"
-        gap={3}
-        gridTemplateColumns={{ xs: '1fr', xl: 'minmax(0, 1.7fr) minmax(360px, 0.9fr)' }}
-      >
-        <SectionCard
-          title="Project portfolio"
-          description="Review financial performance and open any project for deeper cost and payment detail."
-        >
-          {projectsQuery.isLoading ? (
-            <TableSkeleton rows={5} height={640} />
-          ) : projectsQuery.isError ? (
-            <StateNotice
-              title="Projects unavailable"
-              description={getApiErrorMessage(projectsQuery.error)}
-            />
-          ) : projects.length === 0 ? (
-            <StateNotice
-              title="No projects yet"
-              description="Create the first project to start tracking contract value, payments, and profitability."
-            />
-          ) : (
-            <Box sx={{ height: 640, width: '100%' }}>
-              <DataGrid
-                columnVisibilityModel={columnVisibilityModel}
-                columns={columns}
-                disableRowSelectionOnClick
-                hideFooterSelectedRowCount
-                initialState={{
-                  pagination: {
-                    paginationModel: { page: 0, pageSize: 10 },
-                  },
-                }}
-                pageSizeOptions={[5, 10, 25]}
-                pagination
-                rows={projects}
-                showToolbar
-                slotProps={{
-                  toolbar: {
-                    showQuickFilter: true,
-                  },
-                }}
-                sx={{
-                  border: 0,
-                  minWidth: 0,
-                }}
-                onColumnVisibilityModelChange={setColumnVisibilityModel}
-              />
-            </Box>
-          )}
-        </SectionCard>
+      <Stack spacing={1}>
+        <Typography color="text.secondary" variant="body2">
+          {filteredProjects.length} total project{filteredProjects.length === 1 ? '' : 's'}
+        </Typography>
+        <TextField
+          placeholder="Search projects..."
+          value={searchValue}
+          onChange={(event) => setSearchValue(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Stack>
 
-        <SectionCard
-          title={editingProject ? 'Edit project' : 'Create project'}
-          description="Use the backend project payload shape to create or update contract records."
-        >
-          <Box component="form" display="grid" gap={2} noValidate onSubmit={(event) => void handleSubmit(event)}>
+      <Card sx={{ borderRadius: 4 }}>
+        {projectsQuery.isLoading ? (
+          <TableSkeleton rows={8} height={620} />
+        ) : projectsQuery.isError ? (
+          <Box p={3}>
+            <StateNotice title="Projects unavailable" description={getApiErrorMessage(projectsQuery.error)} />
+          </Box>
+        ) : filteredProjects.length === 0 ? (
+          <Box p={3}>
+            <StateNotice
+              title="No projects found"
+              description={
+                searchValue
+                  ? 'Try another search term or clear the filter.'
+                  : 'Create the first project to start tracking contract value and progress.'
+              }
+            />
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Project</TableCell>
+                  {isTabletUp ? <TableCell>Client</TableCell> : null}
+                  {isTabletUp ? <TableCell>Address</TableCell> : null}
+                  <TableCell>Contract</TableCell>
+                  <TableCell>Collected</TableCell>
+                  <TableCell sx={{ minWidth: 160 }}>Milestone</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredProjects.map((project) => (
+                  <TableRow key={project.id} hover>
+                    <TableCell>
+                      <Stack spacing={0.5}>
+                        <Typography fontWeight={700} variant="body2">
+                          {project.name}
+                        </Typography>
+                        {!isTabletUp ? (
+                          <Typography color="text.secondary" variant="caption">
+                            {project.client_name}
+                          </Typography>
+                        ) : null}
+                      </Stack>
+                    </TableCell>
+                    {isTabletUp ? <TableCell>{project.client_name}</TableCell> : null}
+                    {isTabletUp ? (
+                      <TableCell>
+                        <Typography color="text.secondary" variant="body2">
+                          {project.project_address}
+                        </Typography>
+                      </TableCell>
+                    ) : null}
+                    <TableCell>{formatCurrency(project.contract_value)}</TableCell>
+                    <TableCell>{formatCurrency(project.total_revenue)}</TableCell>
+                    <TableCell>
+                      <Stack alignItems="flex-start" direction="row" spacing={1.5}>
+                        <Box sx={{ minWidth: 56 }}>
+                          <LinearProgress
+                            sx={{ borderRadius: 999, height: 8, mt: 1 }}
+                            value={Math.max(0, Math.min(project.milestone_percent, 100))}
+                            variant="determinate"
+                          />
+                        </Box>
+                        <Typography variant="body2">{`${project.milestone_percent.toFixed(0)}%`}</Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge value={project.status} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+                        <IconButton
+                          aria-label={`Open ${project.name}`}
+                          component={RouterLink}
+                          size="small"
+                          to={`/projects/${project.id}`}
+                        >
+                          <VisibilityOutlined fontSize="small" />
+                        </IconButton>
+                        <IconButton aria-label={`Edit ${project.name}`} size="small" onClick={() => handleEdit(project)}>
+                          <EditOutlined fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          aria-label={`Delete ${project.name}`}
+                          color="error"
+                          size="small"
+                          onClick={() => setProjectToDelete(project)}
+                        >
+                          <DeleteOutline fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Card>
+
+      <Dialog fullWidth maxWidth="md" open={isFormOpen} onClose={handleCancelEdit}>
+        <DialogTitle>{editingProject ? 'Edit project' : 'New project'}</DialogTitle>
+        <DialogContent>
+          <Box component="form" display="grid" gap={2} mt={1} noValidate onSubmit={(event) => void handleSubmit(event)}>
             <TextField
               id="project_name"
               label="Project name"
@@ -409,6 +389,26 @@ export function ProjectsPage() {
                 type="number"
                 value={formState.contract_value}
                 onChange={(event) => handleFieldChange('contract_value', Number(event.target.value))}
+              />
+              <TextField
+                id="job_cost_budget"
+                label="Job cost budget"
+                required
+                type="number"
+                value={formState.job_cost_budget}
+                onChange={(event) => handleFieldChange('job_cost_budget', Number(event.target.value))}
+              />
+            </Box>
+
+            <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }}>
+              <TextField
+                id="milestone_percent"
+                label="Milestone progress %"
+                required
+                type="number"
+                slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
+                value={formState.milestone_percent}
+                onChange={(event) => handleFieldChange('milestone_percent', Number(event.target.value))}
               />
               <TextField
                 id="project_status"
@@ -473,15 +473,13 @@ export function ProjectsPage() {
                     ? 'Save project'
                     : 'Create project'}
               </Button>
-              {editingProject ? (
-                <Button variant="outlined" onClick={handleCancelEdit}>
-                  Cancel
-                </Button>
-              ) : null}
+              <Button variant="outlined" onClick={handleCancelEdit}>
+                Cancel
+              </Button>
             </Stack>
           </Box>
-        </SectionCard>
-      </Box>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         confirmLabel="Delete project"

@@ -1,5 +1,6 @@
 export const sidebarItems = [
   { label: 'Dashboard', href: '/' },
+  { label: 'Log Expense', href: '/log-expense' },
   { label: 'Projects', href: '/projects' },
   { label: 'Job Costs', href: '/job-costs' },
   { label: 'Overhead', href: '/overhead' },
@@ -22,6 +23,16 @@ export const jobCostCategoryOptions = [
   { value: 'other', label: 'Other' },
 ] as const
 
+export const jobCostTypeOptions = [
+  { value: 'sub_labor', label: 'Sub Labor' },
+  { value: 'in_house', label: 'In-House' },
+  { value: 'materials', label: 'Materials' },
+  { value: 'timesheet_labor', label: 'Timesheet Labor' },
+  { value: 'permits', label: 'Permits' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'other', label: 'Other' },
+] as const
+
 export const overheadCategoryOptions = [
   { value: 'marketing', label: 'Marketing' },
   { value: 'software', label: 'Software' },
@@ -30,6 +41,15 @@ export const overheadCategoryOptions = [
   { value: 'insurance', label: 'Insurance' },
   { value: 'vehicles', label: 'Vehicles' },
   { value: 'subscriptions', label: 'Subscriptions' },
+  { value: 'other', label: 'Other' },
+] as const
+
+export const overheadGroupOptions = [
+  { value: 'admin_salaries', label: 'Admin Salaries' },
+  { value: 'insurance_licenses', label: 'Insurance & Licenses' },
+  { value: 'vehicles_equipment', label: 'Vehicles & Equipment' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'rent_utilities', label: 'Rent & Utilities' },
   { value: 'other', label: 'Other' },
 ] as const
 

@@ -22,7 +22,7 @@ import {
   useTheme,
 } from '@mui/material'
 
-import type { DashboardCrossCheck } from '@/lib/api/types'
+import type { DashboardCrossCheckRow } from '@/lib/api/types'
 
 export function PageHeader({
   title,
@@ -176,16 +176,19 @@ export function DashboardProjectListItem({
   )
 }
 
-export function DashboardCrossCheckList({ items }: { items: DashboardCrossCheck[] }) {
+export function DashboardCrossCheckList({ items }: { items: DashboardCrossCheckRow[] }) {
   return (
     <Stack spacing={1.5}>
       {items.map((item) => (
-        <Alert key={item.title} severity={item.severity} variant="outlined">
+        <Alert key={item.month} severity="info" variant="outlined">
           <Stack spacing={0.5}>
             <Typography fontWeight={700} variant="body2">
-              {item.title}
+              {item.month}
             </Typography>
-            <Typography variant="body2">{item.detail}</Typography>
+            <Typography variant="body2">
+              Collections {item.collections_actual.toFixed(0)}, overhead {item.overhead_actual.toFixed(0)}, job costs{' '}
+              {item.job_costs_actual.toFixed(0)}
+            </Typography>
           </Stack>
         </Alert>
       ))}
@@ -220,19 +223,47 @@ export function StatusBadge({
   const palette: Record<string, 'warning' | 'success' | 'info' | 'error' | 'default'> = {
     planning: 'warning',
     active: 'success',
-    completed: 'info',
-    cancelled: 'error',
+    completed: 'default',
+    cancelled: 'default',
+  }
+  const labels: Record<string, string> = {
+    planning: 'Preparing',
+    active: 'In Progress',
+    completed: 'Closed',
+    cancelled: 'Closed',
   }
 
   return (
     <Chip
       color={palette[value] ?? 'default'}
-      label={value.replaceAll('_', ' ')}
+      label={labels[value] ?? value.replaceAll('_', ' ')}
       sx={{
         borderRadius: 999,
         fontSize: 12,
         fontWeight: 600,
-        textTransform: 'capitalize',
+        textTransform: 'none',
+      }}
+      variant="filled"
+    />
+  )
+}
+
+export function JobCostStatusBadge({ value }: { value: string }) {
+  const palette: Record<string, 'warning' | 'success' | 'error' | 'default'> = {
+    Open: 'warning',
+    Paid: 'success',
+    Over: 'error',
+  }
+
+  return (
+    <Chip
+      color={palette[value] ?? 'default'}
+      label={value}
+      size="small"
+      sx={{
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
       }}
       variant="filled"
     />

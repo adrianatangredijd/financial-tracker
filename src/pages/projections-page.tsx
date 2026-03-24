@@ -1,390 +1,419 @@
-import { EditOutlined } from '@mui/icons-material'
+import { Add, EditOutlined } from '@mui/icons-material'
 import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   IconButton,
+  MenuItem,
   Stack,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
-  Typography,
-  useMediaQuery,
-  useTheme,
+  Tabs,
 } from '@mui/material'
-import {
-  DataGrid,
-  type GridColDef,
-  type GridColumnVisibilityModel,
-} from '@mui/x-data-grid'
-import { useEffect, useMemo, useState } from 'react'
+import { BarChart, LineChart } from '@mui/x-charts'
+import { Fragment, useMemo, useState } from 'react'
 
-import { MetricCard, MetricCardSkeleton, PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
+import { PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
 import {
-  useCreateProjectionMutation,
-  useProjectionsQuery,
-  useUpdateProjectionMutation,
+  useCreateProjectionPlannerRowMutation,
+  useDashboardQuery,
+  useProjectionPlannerQuery,
+  useUpdateProjectionPlannerRowMutation,
 } from '@/lib/api/hooks'
-import type { Projection, ProjectionPayload } from '@/lib/api/types'
-import { formatCurrency, formatMonthLabel, monthValueToApi, toMonthInputValue } from '@/lib/utils'
+import type {
+  ProjectionPlannerRow,
+  ProjectionPlannerRowPayload,
+  ProjectionPlannerSectionKey,
+  ProjectionPlannerValue,
+} from '@/lib/api/types'
+import { formatCurrency, formatMonthLabel } from '@/lib/utils'
 
-interface ProjectionFormState {
-  month: string
-  projected_revenue: number
-  projected_job_costs: number
-  projected_overhead: number
-  notes: string
+const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+interface ProjectionPlannerFormState {
+  year: number
+  section_key: ProjectionPlannerSectionKey
+  label: string
+  sort_order: number
+  cost_rate: number
+  monthly_values: ProjectionPlannerValue[]
 }
 
-const emptyProjectionForm: ProjectionFormState = {
-  month: '',
-  projected_revenue: 0,
-  projected_job_costs: 0,
-  projected_overhead: 0,
-  notes: '',
-}
+const emptyPlannerForm = (year: number): ProjectionPlannerFormState => ({
+  year,
+  section_key: 'collections',
+  label: '',
+  sort_order: 0,
+  cost_rate: 0.65,
+  monthly_values: monthLabels.map((_, index) => ({ month: index + 1, amount: 0 })),
+})
 
-function buildProjectionFormState(projection?: Projection): ProjectionFormState {
-  if (!projection) {
-    return emptyProjectionForm
-  }
-
+function buildPlannerFormState(row: ProjectionPlannerRow): ProjectionPlannerFormState {
   return {
-    month: toMonthInputValue(projection.month),
-    projected_revenue: projection.projected_revenue,
-    projected_job_costs: projection.projected_job_costs,
-    projected_overhead: projection.projected_overhead,
-    notes: projection.notes,
-  }
-}
-
-function toProjectionPayload(formState: ProjectionFormState): ProjectionPayload {
-  return {
-    ...formState,
-    month: monthValueToApi(formState.month),
+    year: row.year,
+    section_key: row.section_key,
+    label: row.label,
+    sort_order: row.sort_order,
+    cost_rate: row.cost_rate,
+    monthly_values: row.monthly_values.map((value) => ({ ...value })),
   }
 }
 
 export function ProjectionsPage() {
-  const theme = useTheme()
-  const isTabletUp = useMediaQuery(theme.breakpoints.up('md'))
-  const isDesktopUp = useMediaQuery(theme.breakpoints.up('lg'))
-  const projectionsQuery = useProjectionsQuery()
-  const createProjectionMutation = useCreateProjectionMutation({
-    onSuccess: () => {
-      setEditingProjection(null)
-      setFormState(emptyProjectionForm)
-    },
-  })
-  const updateProjectionMutation = useUpdateProjectionMutation({
-    onSuccess: () => {
-      setEditingProjection(null)
-      setFormState(emptyProjectionForm)
-    },
-  })
+  const currentYear = new Date().getFullYear()
+  const plannerQuery = useProjectionPlannerQuery(currentYear)
+  const dashboardQuery = useDashboardQuery()
+  const createPlannerRowMutation = useCreateProjectionPlannerRowMutation()
+  const updatePlannerRowMutation = useUpdateProjectionPlannerRowMutation()
 
-  const [editingProjection, setEditingProjection] = useState<Projection | null>(null)
-  const [formState, setFormState] = useState<ProjectionFormState>(emptyProjectionForm)
+  const [activeTab, setActiveTab] = useState<'planner' | 'actual_vs_projected'>('planner')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingRow, setEditingRow] = useState<ProjectionPlannerRow | null>(null)
+  const [formState, setFormState] = useState<ProjectionPlannerFormState>(emptyPlannerForm(currentYear))
 
-  const projections = useMemo(
-    () =>
-      [...(projectionsQuery.data ?? [])].sort((left, right) => left.month.localeCompare(right.month)),
-    [projectionsQuery.data],
-  )
+  const mutationError = createPlannerRowMutation.error ?? updatePlannerRowMutation.error
+  const planner = plannerQuery.data
 
-  const totals = projections.reduce(
-    (accumulator, projection) => {
-      accumulator.revenue += projection.projected_revenue
-      accumulator.costs += projection.projected_job_costs + projection.projected_overhead
-      accumulator.endingCash = projection.ending_cash
-      return accumulator
-    },
-    { revenue: 0, costs: 0, endingCash: 0 },
-  )
+  const comparisonRows = useMemo(() => {
+    if (!planner || !dashboardQuery.data) {
+      return []
+    }
 
-  const mutationError = createProjectionMutation.error ?? updateProjectionMutation.error
+    const collectionsSection = planner.sections.find((section) => section.key === 'collections')
+    const jobCostsSection = planner.sections.find((section) => section.key === 'job_costs')
+    const overheadSection = planner.sections.find((section) => section.key === 'overhead')
+    const marketingSection = planner.sections.find((section) => section.key === 'marketing')
 
-  const responsiveVisibilityModel = useMemo<GridColumnVisibilityModel>(
-    () => ({
-      month: true,
-      projected_revenue: true,
-      projected_job_costs: isTabletUp,
-      projected_overhead: isDesktopUp,
-      net_cash_flow: isTabletUp,
-      ending_cash: true,
-      actions: true,
-    }),
-    [isDesktopUp, isTabletUp],
-  )
+    return monthLabels.map((label, index) => {
+      const monthKey = String(index + 1).padStart(2, '0')
+      const projectedCollections = collectionsSection?.total_row.monthly_values[index]?.amount ?? 0
+      const projectedExpenses =
+        (jobCostsSection?.total_row.monthly_values[index]?.amount ?? 0) +
+        (overheadSection?.total_row.monthly_values[index]?.amount ?? 0) +
+        (marketingSection?.total_row.monthly_values[index]?.amount ?? 0)
+      const actualPoint = dashboardQuery.data.revenue_vs_expenses.find((point) => point.month.endsWith(`-${monthKey}`))
 
-  const [columnVisibilityModel, setColumnVisibilityModel] =
-    useState<GridColumnVisibilityModel>(responsiveVisibilityModel)
-
-  useEffect(() => {
-    setColumnVisibilityModel(responsiveVisibilityModel)
-  }, [responsiveVisibilityModel])
+      return {
+        month: label,
+        projectedCollections,
+        actualCollections: actualPoint?.revenue ?? 0,
+        projectedExpenses,
+        actualExpenses: actualPoint?.expenses ?? 0,
+      }
+    })
+  }, [dashboardQuery.data, planner])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
-    const payload = toProjectionPayload(formState)
-    if (editingProjection) {
-      await updateProjectionMutation.mutateAsync({
-        projectionId: editingProjection.id,
+    const payload: ProjectionPlannerRowPayload = formState
+    if (editingRow) {
+      await updatePlannerRowMutation.mutateAsync({
+        rowId: editingRow.id,
         payload,
       })
+      setEditingRow(null)
+      setIsDialogOpen(false)
+      setFormState(emptyPlannerForm(currentYear))
       return
     }
 
-    await createProjectionMutation.mutateAsync(payload)
+    await createPlannerRowMutation.mutateAsync(payload)
+    setIsDialogOpen(false)
+    setFormState(emptyPlannerForm(currentYear))
   }
 
-  function handleEdit(projection: Projection) {
-    setEditingProjection(projection)
-    setFormState(buildProjectionFormState(projection))
+  function handleEdit(row: ProjectionPlannerRow) {
+    setEditingRow(row)
+    setFormState(buildPlannerFormState(row))
+    setIsDialogOpen(true)
   }
 
-  function handleCancelEdit() {
-    setEditingProjection(null)
-    setFormState(emptyProjectionForm)
+  function handleCreate(sectionKey: ProjectionPlannerSectionKey = 'collections') {
+    setEditingRow(null)
+    setFormState({ ...emptyPlannerForm(currentYear), section_key: sectionKey })
+    setIsDialogOpen(true)
   }
-
-  const columns: GridColDef[] = [
-    {
-      field: 'month',
-      flex: 1,
-      headerName: 'Month',
-      minWidth: 180,
-      renderCell: ({ row }) => (
-        <Box py={1}>
-          <Typography fontWeight={700} variant="body2">
-            {formatMonthLabel(row.month)}
-          </Typography>
-          <Typography color="text.secondary" variant="caption">
-            {row.notes || 'No notes'}
-          </Typography>
-        </Box>
-      ),
-    },
-    {
-      field: 'projected_revenue',
-      headerName: 'Revenue',
-      minWidth: 140,
-      valueFormatter: (value) => formatCurrency(Number(value)),
-    },
-    {
-      field: 'projected_job_costs',
-      headerName: 'Job Costs',
-      minWidth: 140,
-      valueFormatter: (value) => formatCurrency(Number(value)),
-    },
-    {
-      field: 'projected_overhead',
-      headerName: 'Overhead',
-      minWidth: 140,
-      valueFormatter: (value) => formatCurrency(Number(value)),
-    },
-    {
-      field: 'net_cash_flow',
-      headerName: 'Net Cash Flow',
-      minWidth: 160,
-      valueFormatter: (value) => formatCurrency(Number(value)),
-    },
-    {
-      field: 'ending_cash',
-      headerName: 'Ending Cash',
-      minWidth: 150,
-      valueFormatter: (value) => formatCurrency(Number(value)),
-    },
-    {
-      field: 'actions',
-      disableColumnMenu: true,
-      filterable: false,
-      headerName: 'Actions',
-      minWidth: 90,
-      sortable: false,
-      renderCell: ({ row }) => (
-        <IconButton
-          aria-label={`Edit ${formatMonthLabel(row.month)}`}
-          color="primary"
-          size="small"
-          onClick={() => handleEdit(row)}
-        >
-          <EditOutlined fontSize="small" />
-        </IconButton>
-      ),
-    },
-  ]
 
   return (
     <Stack spacing={3}>
       <PageHeader
         title="Projections"
-        description="Forecast upcoming revenue, direct costs, overhead, and resulting ending cash."
+        description={`${currentYear} Cash Flow Tracker - All amounts in actual dollars.`}
+        actions={
+          <Button startIcon={<Add />} variant="contained" onClick={() => handleCreate('collections')}>
+            Add Project
+          </Button>
+        }
       />
 
-      <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }}>
-        {projectionsQuery.isLoading ? (
-          <>
-            <MetricCardSkeleton />
-            <MetricCardSkeleton />
-            <MetricCardSkeleton />
-          </>
-        ) : (
-          <>
-            <MetricCard
-              label="Projected Revenue"
-              value={formatCurrency(totals.revenue)}
-              helper="Combined projected revenue across all forecast months."
-            />
-            <MetricCard
-              label="Projected Outflows"
-              value={formatCurrency(totals.costs)}
-              helper="Projected job costs plus projected overhead."
-            />
-            <MetricCard
-              label="Ending Cash"
-              value={formatCurrency(totals.endingCash)}
-              helper="Latest rolling cash balance from the forecast series."
-            />
-          </>
-        )}
-      </Box>
+      <SectionCard title="Projection Planner">
+        <Stack spacing={3}>
+          <Tabs value={activeTab} onChange={(_event, value) => setActiveTab(value)}>
+            <Tab label={`${currentYear} Projections`} value="planner" />
+            <Tab label="Actual vs Projected" value="actual_vs_projected" />
+          </Tabs>
 
-      <Box
-        display="grid"
-        gap={3}
-        gridTemplateColumns={{ xs: '1fr', xl: 'minmax(0, 1.4fr) minmax(360px, 0.9fr)' }}
-      >
-        <SectionCard
-          title="Projection schedule"
-          description="Monthly forecast entries returned by the backend projection service."
-        >
-          {projectionsQuery.isLoading ? (
-            <TableSkeleton />
-          ) : projectionsQuery.isError ? (
-            <StateNotice
-              title="Projections unavailable"
-              description={getApiErrorMessage(projectionsQuery.error)}
-            />
+          {plannerQuery.isLoading ? (
+            <>
+              <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }}>
+                <TableSkeleton rows={4} height={320} />
+                <TableSkeleton rows={4} height={320} />
+              </Box>
+              <TableSkeleton rows={10} height={720} />
+            </>
+          ) : plannerQuery.isError || !planner ? (
+            <StateNotice title="Projections unavailable" description={getApiErrorMessage(plannerQuery.error)} />
           ) : (
-            <Box sx={{ height: 620, width: '100%' }}>
-              <DataGrid
-                columnVisibilityModel={columnVisibilityModel}
-                columns={columns}
-                disableRowSelectionOnClick
-                hideFooterSelectedRowCount
-                initialState={{
-                  pagination: {
-                    paginationModel: { page: 0, pageSize: 10 },
-                  },
-                }}
-                pageSizeOptions={[5, 10, 25]}
-                pagination
-                rows={projections}
-                showToolbar
-                slotProps={{
-                  toolbar: {
-                    showQuickFilter: true,
-                  },
-                }}
-                sx={{ border: 0 }}
-                onColumnVisibilityModelChange={setColumnVisibilityModel}
-              />
-            </Box>
+            <>
+              <Box display="grid" gap={3} gridTemplateColumns={{ xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }}>
+                <SectionCard title="Cash Balance Forecast">
+                  <Box sx={{ height: 300 }}>
+                    <LineChart
+                      height={300}
+                      margin={{ top: 16, right: 16, bottom: 24, left: 72 }}
+                      series={[
+                        {
+                          data: planner.charts.cash_balance_forecast.map((point) => point.amount),
+                          label: 'Cash Balance',
+                        },
+                      ]}
+                      xAxis={[
+                        {
+                          scaleType: 'point',
+                          data: planner.charts.cash_balance_forecast.map((point) => formatMonthLabel(point.month)),
+                        },
+                      ]}
+                    />
+                  </Box>
+                </SectionCard>
+
+                <SectionCard title="Collections vs Total Expenses">
+                  <Box sx={{ height: 300 }}>
+                    <BarChart
+                      height={300}
+                      margin={{ top: 16, right: 16, bottom: 24, left: 72 }}
+                      series={[
+                        {
+                          data: planner.charts.collections_vs_total_expenses.map((point) => point.revenue),
+                          label: 'Collections',
+                        },
+                        {
+                          data: planner.charts.collections_vs_total_expenses.map((point) => point.expenses),
+                          label: 'Total Expenses',
+                        },
+                      ]}
+                      xAxis={[
+                        {
+                          scaleType: 'band',
+                          data: planner.charts.collections_vs_total_expenses.map((point) => formatMonthLabel(point.month)),
+                        },
+                      ]}
+                    />
+                  </Box>
+                </SectionCard>
+              </Box>
+
+              {activeTab === 'planner' ? (
+                <SectionCard
+                  title={`TG Renovations - ${planner.year} Cash Flow Tracker`}
+                  description='Click "Edit" on any row to modify values.'
+                >
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ minWidth: 240 }}>Line Item</TableCell>
+                          {monthLabels.map((label) => (
+                            <TableCell key={label} align="right">
+                              {label}
+                            </TableCell>
+                          ))}
+                          <TableCell align="right">Total</TableCell>
+                          <TableCell align="right">Action</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {planner.sections.map((section) => (
+                          <Fragment key={section.key}>
+                            <TableRow key={section.key}>
+                              <TableCell colSpan={15} sx={{ bgcolor: 'grey.100', fontWeight: 700 }}>
+                                {section.label}
+                              </TableCell>
+                            </TableRow>
+                            {section.rows.map((row) => (
+                              <TableRow key={row.id} hover>
+                                <TableCell>{row.label}</TableCell>
+                                {row.monthly_values.map((value) => (
+                                  <TableCell key={`${row.id}-${value.month}`} align="right">
+                                    {value.amount > 0 ? formatCurrency(value.amount) : '-'}
+                                  </TableCell>
+                                ))}
+                                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                                  {formatCurrency(row.total)}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {section.key === 'collections' || section.key === 'overhead' || section.key === 'marketing' ? (
+                                    <IconButton
+                                      aria-label={`Edit ${row.label}`}
+                                      color="primary"
+                                      size="small"
+                                      onClick={() => handleEdit(row)}
+                                    >
+                                      <EditOutlined fontSize="small" />
+                                    </IconButton>
+                                  ) : null}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 700 }}>{section.total_row.label}</TableCell>
+                              {section.total_row.monthly_values.map((value) => (
+                                <TableCell
+                                  key={`${section.total_row.label}-${value.month}`}
+                                  align="right"
+                                  sx={{
+                                    color: section.key === 'net_cash_flow' && value.amount < 0 ? 'error.main' : 'text.primary',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {formatCurrency(value.amount)}
+                                </TableCell>
+                              ))}
+                              <TableCell
+                                align="right"
+                                sx={{
+                                  color: section.key === 'net_cash_flow' && section.total_row.total < 0 ? 'error.main' : 'text.primary',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {formatCurrency(section.total_row.total)}
+                              </TableCell>
+                              <TableCell />
+                            </TableRow>
+                          </Fragment>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </SectionCard>
+              ) : (
+                <SectionCard title="Actual vs Projected">
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Month</TableCell>
+                          <TableCell align="right">Projected Collections</TableCell>
+                          <TableCell align="right">Actual Collections</TableCell>
+                          <TableCell align="right">Projected Expenses</TableCell>
+                          <TableCell align="right">Actual Expenses</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {comparisonRows.map((row) => (
+                          <TableRow key={row.month}>
+                            <TableCell>{row.month}</TableCell>
+                            <TableCell align="right">{formatCurrency(row.projectedCollections)}</TableCell>
+                            <TableCell align="right">{formatCurrency(row.actualCollections)}</TableCell>
+                            <TableCell align="right">{formatCurrency(row.projectedExpenses)}</TableCell>
+                            <TableCell align="right">{formatCurrency(row.actualExpenses)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </SectionCard>
+              )}
+            </>
           )}
-        </SectionCard>
+        </Stack>
+      </SectionCard>
 
-        <SectionCard
-          title={editingProjection ? 'Edit projection' : 'Create projection'}
-          description="Create or update the monthly forecast payload used by the backend."
-          actions={
-            editingProjection ? (
-              <Button variant="outlined" onClick={handleCancelEdit}>
-                Cancel edit
-              </Button>
-            ) : null
-          }
-        >
-          <Box component="form" display="grid" gap={2} onSubmit={(event) => void handleSubmit(event)}>
-            <TextField
-              id="projection_month"
-              label="Month"
-              required
-              slotProps={{ inputLabel: { shrink: true } }}
-              type="month"
-              value={formState.month}
-              onChange={(event) =>
-                setFormState((current) => ({ ...current, month: event.target.value }))
-              }
-            />
-
+      <Dialog fullWidth maxWidth="md" open={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
+        <DialogTitle>{editingRow ? 'Edit projection row' : 'Add projection row'}</DialogTitle>
+        <DialogContent>
+          <Box component="form" display="grid" gap={2} mt={1} onSubmit={(event) => void handleSubmit(event)}>
             <Box display="grid" gap={2} gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }}>
               <TextField
-                id="projected_revenue"
-                label="Projected revenue"
-                required
-                type="number"
-                value={formState.projected_revenue}
+                label="Section"
+                select
+                value={formState.section_key}
                 onChange={(event) =>
                   setFormState((current) => ({
                     ...current,
-                    projected_revenue: Number(event.target.value),
+                    section_key: event.target.value as ProjectionPlannerSectionKey,
                   }))
                 }
-              />
-
+              >
+                <MenuItem value="collections">Collections</MenuItem>
+                <MenuItem value="overhead">Overhead</MenuItem>
+                <MenuItem value="marketing">Marketing</MenuItem>
+              </TextField>
               <TextField
-                id="projected_job_costs"
-                label="Projected job costs"
+                label="Label"
                 required
-                type="number"
-                value={formState.projected_job_costs}
-                onChange={(event) =>
-                  setFormState((current) => ({
-                    ...current,
-                    projected_job_costs: Number(event.target.value),
-                  }))
-                }
+                value={formState.label}
+                onChange={(event) => setFormState((current) => ({ ...current, label: event.target.value }))}
               />
             </Box>
 
-            <TextField
-              id="projected_overhead"
-              label="Projected overhead"
-              required
-              type="number"
-              value={formState.projected_overhead}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  projected_overhead: Number(event.target.value),
-                }))
-              }
-            />
+            {formState.section_key === 'collections' ? (
+              <TextField
+                label="Cost Rate"
+                type="number"
+                value={formState.cost_rate}
+                onChange={(event) =>
+                  setFormState((current) => ({ ...current, cost_rate: Number(event.target.value) }))
+                }
+              />
+            ) : null}
 
-            <TextField
-              id="projection_notes"
-              label="Notes"
-              minRows={4}
-              multiline
-              value={formState.notes}
-              onChange={(event) =>
-                setFormState((current) => ({ ...current, notes: event.target.value }))
-              }
-            />
+            <Box display="grid" gap={2} gridTemplateColumns={{ xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }}>
+              {formState.monthly_values.map((value, index) => (
+                <TextField
+                  key={value.month}
+                  label={monthLabels[index]}
+                  type="number"
+                  value={value.amount}
+                  onChange={(event) =>
+                    setFormState((current) => ({
+                      ...current,
+                      monthly_values: current.monthly_values.map((item) =>
+                        item.month === value.month ? { ...item, amount: Number(event.target.value) } : item,
+                      ),
+                    }))
+                  }
+                />
+              ))}
+            </Box>
 
             {mutationError ? <Alert severity="error">{getApiErrorMessage(mutationError)}</Alert> : null}
 
-            <Button
-              disabled={createProjectionMutation.isPending || updateProjectionMutation.isPending}
-              type="submit"
-              variant="contained"
-            >
-              {editingProjection ? 'Save projection' : 'Create projection'}
-            </Button>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={1.5}>
+              <Button variant="outlined" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={createPlannerRowMutation.isPending || updatePlannerRowMutation.isPending}
+                type="submit"
+                variant="contained"
+              >
+                {editingRow ? 'Save row' : 'Create row'}
+              </Button>
+            </Stack>
           </Box>
-        </SectionCard>
-      </Box>
+        </DialogContent>
+      </Dialog>
     </Stack>
   )
 }
