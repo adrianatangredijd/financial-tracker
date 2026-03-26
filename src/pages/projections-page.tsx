@@ -371,6 +371,7 @@ export function ProjectionsPage() {
               <TextField
                 label="Cost Rate"
                 type="number"
+                helperText="Fraction of collections allocated to job costs (e.g. 0.65 = 65%)"
                 value={formState.cost_rate}
                 onChange={(event) =>
                   setFormState((current) => ({ ...current, cost_rate: Number(event.target.value) }))
