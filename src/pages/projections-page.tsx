@@ -185,6 +185,7 @@ export function ProjectionsPage() {
                         {
                           data: planner.charts.cash_balance_forecast.map((point) => point.amount),
                           label: 'Cash Balance',
+                          color: '#10b981',
                         },
                       ]}
                       xAxis={[
@@ -206,10 +207,12 @@ export function ProjectionsPage() {
                         {
                           data: planner.charts.collections_vs_total_expenses.map((point) => point.revenue),
                           label: 'Collections',
+                          color: '#10b981',
                         },
                         {
                           data: planner.charts.collections_vs_total_expenses.map((point) => point.expenses),
                           label: 'Total Expenses',
+                          color: '#ef4444',
                         },
                       ]}
                       xAxis={[

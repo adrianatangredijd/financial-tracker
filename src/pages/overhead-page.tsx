@@ -348,6 +348,7 @@ export function OverheadPage() {
                   {
                     data: (overheadQuery.data?.summary.monthly_series ?? []).map((point) => point.amount),
                     label: 'Overhead',
+                    color: '#ef4444',
                   },
                 ]}
                 xAxis={[
