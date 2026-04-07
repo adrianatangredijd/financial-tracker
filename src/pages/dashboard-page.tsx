@@ -6,41 +6,10 @@ import { MetricCard, PageHeader, SectionCard, StateNotice, TableSkeleton } from 
 import { getApiErrorMessage } from '@/lib/api/client'
 import { useDashboardQuery } from '@/lib/api/hooks'
 import type { DashboardProjectMargin } from '@/lib/api/types'
-import { formatCurrency, formatMonthLabel, formatPercent } from '@/lib/utils'
+import { formatCurrency, formatMonthLabel } from '@/lib/utils'
 
 function BudgetStatusChip({ status }: { status: string }) {
   return <Chip color={status === 'Over Budget' ? 'error' : 'success'} label={status} size="small" />
-}
-
-function PLRow({
-  label,
-  value,
-  kind,
-}: {
-  label: string
-  value: number
-  kind: 'revenue' | 'cost' | 'result'
-}) {
-  const color =
-    kind === 'revenue'
-      ? 'success.main'
-      : kind === 'cost'
-        ? 'error.main'
-        : value >= 0
-          ? 'success.main'
-          : 'error.main'
-
-  const formatted =
-    kind === 'cost' && value !== 0
-      ? `(${formatCurrency(Math.abs(value))})`
-      : formatCurrency(value)
-
-  return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography color="text.secondary" variant="body2">{label}</Typography>
-      <Typography color={color} fontWeight={700} variant="body2">{formatted}</Typography>
-    </Stack>
-  )
 }
 
 function ProgressList({
