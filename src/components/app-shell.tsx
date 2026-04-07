@@ -73,32 +73,28 @@ export function AppShell() {
   function renderNavigation(closeOnSelect: boolean) {
     return (
       <Stack sx={{ height: '100%' }}>
-        <Box px={2.5} py={3}>
-          <Stack alignItems={isCollapsed && isMediumUp && !isLargeUp ? 'center' : 'flex-start'} spacing={1}>
+        <Box px={2} py={2}>
+          <Stack alignItems={isCollapsed && isMediumUp && !isLargeUp ? 'center' : 'flex-start'} spacing={0.25}>
             <Typography
-              color="primary.main"
-              fontSize={12}
+              color="text.secondary"
+              fontSize={10}
               fontWeight={700}
-              letterSpacing="0.2em"
+              letterSpacing="0.15em"
               textTransform="uppercase"
             >
               Renovation
             </Typography>
             <Typography
+              fontWeight={700}
               textAlign={isCollapsed && isMediumUp && !isLargeUp ? 'center' : 'left'}
-              variant="h6"
+              variant="subtitle1"
             >
               {isCollapsed && isMediumUp && !isLargeUp ? 'TG' : 'TG Renovation'}
             </Typography>
-            {isCollapsed && isMediumUp && !isLargeUp ? null : (
-              <Typography color="text.secondary" variant="body2">
-                Sophisticated renovation project management, costs, and financial tracking.
-              </Typography>
-            )}
           </Stack>
         </Box>
         <Divider />
-        <List sx={{ flexGrow: 1, px: 1.5, py: 2 }}>
+        <List sx={{ flexGrow: 1, px: 1, py: 1 }}>
           {sidebarItems.map((item) => {
             const Icon = icons[item.label]
             const selected = isItemActive(item.href)
@@ -114,10 +110,10 @@ export function AppShell() {
                   component={NavLink}
                   selected={selected}
                   sx={{
-                    borderRadius: 3,
+                    borderRadius: 2,
                     justifyContent: isCollapsed && isMediumUp && !isLargeUp ? 'center' : 'flex-start',
-                    mb: 0.75,
-                    minHeight: 48,
+                    mb: 0.5,
+                    minHeight: 40,
                     px: 1.5,
                   }}
                   to={item.href}
@@ -195,7 +191,7 @@ export function AppShell() {
             borderColor: 'divider',
           }}
         >
-          <Toolbar sx={{ gap: 1.5, minHeight: { xs: 64, md: 72 } }}>
+          <Toolbar sx={{ gap: 1, minHeight: { xs: 56, md: 56 } }}>
             {!isMediumUp ? (
               <IconButton aria-label="Open navigation" edge="start" onClick={() => setMobileOpen(true)}>
                 <MenuIcon />
@@ -209,16 +205,10 @@ export function AppShell() {
                 {isCollapsed ? <ExpandIcon /> : <CollapseIcon />}
               </IconButton>
             ) : null}
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h6">TG Renovation</Typography>
-              <Typography color="text.secondary" variant="body2">
-                Financial operations & project tracking
-              </Typography>
-            </Box>
           </Toolbar>
         </AppBar>
 
-        <Container sx={{ px: { xs: 2, md: 3, lg: 4 }, py: { xs: 3, md: 4 } }}>
+        <Container sx={{ px: { xs: 2, md: 3, lg: 4 }, py: { xs: 2, md: 3 } }}>
           <Outlet />
         </Container>
       </Box>

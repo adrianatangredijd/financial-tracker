@@ -36,31 +36,20 @@ export function PageHeader({
   return (
     <Stack
       direction={{ xs: 'column', md: 'row' }}
-      spacing={2}
-      alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+      spacing={1.5}
+      alignItems={{ xs: 'flex-start', md: 'center' }}
       justifyContent="space-between"
     >
       <Box>
-        <Typography
-          color="primary.main"
-          fontSize={12}
-          fontWeight={700}
-          letterSpacing="0.18em"
-          textTransform="uppercase"
-        >
-          TG Renovation
-        </Typography>
-        <Typography mt={1} variant="h4">
-          {title}
-        </Typography>
-        <Typography color="text.secondary" maxWidth={720} mt={1.5} variant="body2">
+        <Typography variant="h4">{title}</Typography>
+        <Typography color="text.secondary" maxWidth={640} mt={0.5} variant="body2">
           {description}
         </Typography>
       </Box>
       {actions ? (
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
-          spacing={1.5}
+          spacing={1}
           sx={{ width: { xs: '100%', md: 'auto' } }}
         >
           {actions}
@@ -74,21 +63,23 @@ export function MetricCard({
   label,
   value,
   helper,
+  valueColor,
 }: {
   label: string
   value: string
   helper: string
+  valueColor?: string
 }) {
   return (
     <Card>
-      <CardHeader
-        subheader={label}
-        subheaderTypographyProps={{ fontWeight: 600, textTransform: 'uppercase', variant: 'caption' }}
-        title={value}
-        titleTypographyProps={{ variant: 'h5' }}
-      />
-      <CardContent sx={{ pt: 0 }}>
-        <Typography color="text.secondary" variant="body2">
+      <CardContent>
+        <Typography color="text.secondary" fontWeight={600} textTransform="uppercase" variant="caption">
+          {label}
+        </Typography>
+        <Typography color={valueColor} mt={0.5} variant="h5">
+          {value}
+        </Typography>
+        <Typography color="text.secondary" mt={0.5} variant="caption">
           {helper}
         </Typography>
       </CardContent>
@@ -167,7 +158,6 @@ export function DashboardProjectListItem({
           </Typography>
         </Stack>
         <LinearProgress
-          sx={{ borderRadius: 999, height: 8 }}
           value={Math.max(0, Math.min(progressValue, 100))}
           variant="determinate"
         />
@@ -294,12 +284,10 @@ export function StateNotice({
 export function MetricCardSkeleton() {
   return (
     <Card>
-      <CardHeader
-        subheader={<Skeleton width="60%" />}
-        title={<Skeleton width="45%" height={32} />}
-      />
-      <CardContent sx={{ pt: 0 }}>
-        <Skeleton width="80%" />
+      <CardContent>
+        <Skeleton width="50%" height={14} />
+        <Skeleton width="60%" height={28} sx={{ mt: 0.5 }} />
+        <Skeleton width="80%" height={14} sx={{ mt: 0.5 }} />
       </CardContent>
     </Card>
   )

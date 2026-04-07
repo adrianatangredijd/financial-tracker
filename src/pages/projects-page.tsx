@@ -311,7 +311,7 @@ export function ProjectsPage() {
                       <Stack alignItems="flex-start" direction="row" spacing={1.5}>
                         <Box sx={{ minWidth: 56 }}>
                           <LinearProgress
-                            sx={{ borderRadius: 999, height: 8, mt: 1 }}
+                            sx={{ mt: 1 }}
                             value={Math.max(0, Math.min(project.milestone_percent, 100))}
                             variant="determinate"
                           />

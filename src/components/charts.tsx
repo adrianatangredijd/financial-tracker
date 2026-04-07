@@ -78,14 +78,14 @@ export function ComparisonBarChartPanel({
           {
             label: 'Revenue',
             data: data.map((point) => point.revenue),
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            borderRadius: 10,
+            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+            borderRadius: 6,
           },
           {
             label: 'Expenses',
             data: data.map((point) => point.expenses),
-            backgroundColor: 'rgba(64, 64, 64, 0.85)',
-            borderRadius: 10,
+            backgroundColor: 'rgba(239, 68, 68, 0.75)',
+            borderRadius: 6,
           },
         ],
       }}
@@ -135,8 +135,8 @@ export function LineChartPanel({
           {
             label: title,
             data: data.map((point) => point.amount),
-            borderColor: '#000000',
-            backgroundColor: 'rgba(0, 0, 0, 0.10)',
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.12)',
             fill: true,
             tension: 0.3,
           },
@@ -195,8 +195,8 @@ export function ValueBarChartPanel({
           {
             label: title,
             data: data.map((point) => point.value),
-            backgroundColor: 'rgba(179, 178, 178, 0.82)',
-            borderRadius: 10,
+            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+            borderRadius: 6,
           },
         ],
       }}
@@ -249,14 +249,14 @@ export function BudgetActualChartPanel({
           {
             label: 'Budget',
             data: data.map((point) => point.budget),
-            backgroundColor: 'rgba(179, 178, 178, 0.5)',
-            borderRadius: 10,
+            backgroundColor: 'rgba(156, 163, 175, 0.5)',
+            borderRadius: 6,
           },
           {
             label: 'Actual',
             data: data.map((point) => point.actual),
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            borderRadius: 10,
+            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+            borderRadius: 6,
           },
         ],
       }}
