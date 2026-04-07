@@ -312,38 +312,6 @@ export function DashboardPage() {
             }
           >
             <Stack spacing={2}>
-              <Box>
-                <Box sx={{ position: 'relative', height: 32, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
-                  {metrics.break_even.revenue_run_rate > 0 && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        bgcolor: 'success.main',
-                        opacity: 0.15,
-                        width: '100%',
-                      }}
-                    />
-                  )}
-                  {metrics.break_even.break_even_point > 0 && metrics.break_even.revenue_run_rate > 0 && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        bottom: 0,
-                        left: `${Math.min((metrics.break_even.break_even_point / metrics.break_even.revenue_run_rate) * 100, 100)}%`,
-                        width: 2,
-                        bgcolor: 'text.primary',
-                      }}
-                    />
-                  )}
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ position: 'relative', height: '100%', px: 1.5 }}>
-                    <Typography variant="caption" fontWeight={600}>Break-Even</Typography>
-                    <Typography variant="caption" fontWeight={600} color="success.main">Revenue</Typography>
-                  </Stack>
-                </Box>
-              </Box>
-
               <Grid container spacing={2}>
                 <Grid size={{ xs: 6, md: 4 }}>
                   <Typography color="text.secondary" textTransform="uppercase" variant="caption" fontWeight={600}>Monthly Overhead</Typography>
