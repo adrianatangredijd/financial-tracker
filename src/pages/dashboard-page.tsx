@@ -197,6 +197,12 @@ export function DashboardPage() {
   ]
 
   const aboveBreakEven = metrics.break_even.surplus >= 0
+  const grossMarginPct = metrics.profit_loss.revenue > 0
+    ? ((metrics.profit_loss.gross_profit / metrics.profit_loss.revenue) * 100).toFixed(0)
+    : '0'
+  const netMarginPct = metrics.profit_loss.revenue > 0
+    ? ((metrics.profit_loss.net_profit / metrics.profit_loss.revenue) * 100).toFixed(0)
+    : '0'
 
   return (
     <Stack spacing={2.5}>
@@ -272,14 +278,57 @@ export function DashboardPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <SectionCard title="Profit & Loss Statement">
-            <Stack divider={<Divider flexItem />} spacing={1.25}>
-              <PLRow label="Revenue (Collections)" value={metrics.profit_loss.revenue} kind="revenue" />
-              <PLRow label="Job Costs (COGS)" value={metrics.profit_loss.job_costs} kind="cost" />
-              <PLRow label="Gross Profit" value={metrics.profit_loss.gross_profit} kind="result" />
-              <PLRow label="Overhead" value={metrics.profit_loss.overhead} kind="cost" />
-              <PLRow label="Net Profit" value={metrics.profit_loss.net_profit} kind="result" />
-            </Stack>
+          <SectionCard
+            title="Profit & Loss Statement"
+            actions={
+              <Stack direction="row" spacing={1}>
+                <Chip color="success" label={`Gross Margin: ${grossMarginPct}%`} size="small" variant="filled" />
+                <Chip color={metrics.profit_loss.net_profit >= 0 ? 'success' : 'error'} label={`Net Margin: ${netMarginPct}%`} size="small" variant="filled" />
+              </Stack>
+            }
+          >
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700, border: 0, pl: 0 }} />
+                  <TableCell align="right" sx={{ fontWeight: 700, border: 0 }}>YTD</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ pl: 0 }}>Revenue (Collections)</TableCell>
+                  <TableCell align="right">
+                    <Typography color="success.main" fontWeight={600} variant="body2">{formatCurrency(metrics.profit_loss.revenue)}</Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ pl: 0 }}>Job Costs (COGS)</TableCell>
+                  <TableCell align="right">
+                    <Typography color="error.main" fontWeight={600} variant="body2">({formatCurrency(Math.abs(metrics.profit_loss.job_costs))})</Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ pl: 0, fontWeight: 700 }}>Gross Profit</TableCell>
+                  <TableCell align="right">
+                    <Typography fontWeight={700} variant="body2">{formatCurrency(metrics.profit_loss.gross_profit)}</Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ pl: 0 }}>Overhead</TableCell>
+                  <TableCell align="right">
+                    <Typography color="error.main" fontWeight={600} variant="body2">({formatCurrency(Math.abs(metrics.profit_loss.overhead))})</Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ pl: 0, fontWeight: 700, borderBottom: 0 }}>Net Profit</TableCell>
+                  <TableCell align="right" sx={{ borderBottom: 0 }}>
+                    <Typography color={metrics.profit_loss.net_profit >= 0 ? 'success.main' : 'error.main'} fontWeight={700} variant="body2">
+                      {formatCurrency(metrics.profit_loss.net_profit)}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </SectionCard>
         </Grid>
         <Grid size={{ xs: 12, lg: 6 }}>
@@ -293,31 +342,69 @@ export function DashboardPage() {
               />
             }
           >
-            <Stack divider={<Divider flexItem />} spacing={1.25}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Monthly overhead</Typography>
-                <Typography fontWeight={700} variant="body2">{formatCurrency(metrics.break_even.monthly_overhead)}</Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Break-even point</Typography>
-                <Typography color="error.main" fontWeight={700} variant="body2">{formatCurrency(metrics.break_even.break_even_point)}</Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Revenue run rate</Typography>
-                <Typography fontWeight={700} variant="body2">{formatCurrency(metrics.break_even.revenue_run_rate)}</Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Surplus</Typography>
-                <Typography color={metrics.break_even.surplus >= 0 ? 'success.main' : 'error.main'} fontWeight={700} variant="body2">
-                  {formatCurrency(metrics.break_even.surplus)}
-                </Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary" variant="body2">Coverage ratio</Typography>
-                <Typography color={metrics.break_even.coverage_ratio >= 1 ? 'success.main' : 'error.main'} fontWeight={700} variant="body2">
-                  {formatPercent(metrics.break_even.coverage_ratio)}
-                </Typography>
-              </Stack>
+            <Stack spacing={2}>
+              <Box>
+                <Box sx={{ position: 'relative', height: 32, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+                  {metrics.break_even.revenue_run_rate > 0 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        bgcolor: 'success.main',
+                        opacity: 0.15,
+                        width: '100%',
+                      }}
+                    />
+                  )}
+                  {metrics.break_even.break_even_point > 0 && metrics.break_even.revenue_run_rate > 0 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: `${Math.min((metrics.break_even.break_even_point / metrics.break_even.revenue_run_rate) * 100, 100)}%`,
+                        width: 2,
+                        bgcolor: 'text.primary',
+                      }}
+                    />
+                  )}
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ position: 'relative', height: '100%', px: 1.5 }}>
+                    <Typography variant="caption" fontWeight={600}>Break-Even</Typography>
+                    <Typography variant="caption" fontWeight={600} color="success.main">Revenue</Typography>
+                  </Stack>
+                </Box>
+              </Box>
+
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <Typography color="text.secondary" textTransform="uppercase" variant="caption" fontWeight={600}>Monthly Overhead</Typography>
+                  <Typography fontWeight={700} variant="body1">{formatCurrency(metrics.break_even.monthly_overhead)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <Typography color="text.secondary" textTransform="uppercase" variant="caption" fontWeight={600}>Break-Even</Typography>
+                  <Typography color="error.main" fontWeight={700} variant="body1">{formatCurrency(metrics.break_even.break_even_point)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <Typography color="text.secondary" textTransform="uppercase" variant="caption" fontWeight={600}>Revenue Run Rate</Typography>
+                  <Typography fontWeight={700} variant="body1">{formatCurrency(metrics.break_even.revenue_run_rate)}</Typography>
+                </Grid>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <Typography color="text.secondary" textTransform="uppercase" variant="caption" fontWeight={600}>Surplus</Typography>
+                  <Typography color={metrics.break_even.surplus >= 0 ? 'success.main' : 'error.main'} fontWeight={700} variant="body1">
+                    {formatCurrency(metrics.break_even.surplus)}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <Typography color="text.secondary" textTransform="uppercase" variant="caption" fontWeight={600}>Coverage Ratio</Typography>
+                  <Typography color={metrics.break_even.coverage_ratio >= 1 ? 'success.main' : 'error.main'} fontWeight={700} variant="body1">
+                    {metrics.break_even.coverage_ratio.toFixed(1)}x
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              <Typography color="text.secondary" variant="caption">
+                Revenue must cover {formatCurrency(metrics.break_even.break_even_point)}/mo in fixed costs before profit.
+              </Typography>
             </Stack>
           </SectionCard>
         </Grid>
