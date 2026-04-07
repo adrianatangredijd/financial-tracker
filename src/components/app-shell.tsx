@@ -82,17 +82,17 @@ export function AppShell() {
               letterSpacing="0.2em"
               textTransform="uppercase"
             >
-              Operations
+              Renovation
             </Typography>
             <Typography
               textAlign={isCollapsed && isMediumUp && !isLargeUp ? 'center' : 'left'}
               variant="h6"
             >
-              {isCollapsed && isMediumUp && !isLargeUp ? 'FT' : 'Financial Tracker'}
+              {isCollapsed && isMediumUp && !isLargeUp ? 'TG' : 'TG Renovation'}
             </Typography>
             {isCollapsed && isMediumUp && !isLargeUp ? null : (
               <Typography color="text.secondary" variant="body2">
-                Manage project profitability, direct job costs, overhead, and forward cash flow.
+                Sophisticated renovation project management, costs, and financial tracking.
               </Typography>
             )}
           </Stack>
@@ -190,7 +190,7 @@ export function AppShell() {
           position="sticky"
           sx={{
             backdropFilter: 'blur(10px)',
-            bgcolor: 'rgba(248, 250, 252, 0.92)',
+            bgcolor: 'rgba(255, 255, 255, 0.92)',
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
@@ -210,9 +210,9 @@ export function AppShell() {
               </IconButton>
             ) : null}
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="h6">Construction Financial Tracker</Typography>
+              <Typography variant="h6">TG Renovation</Typography>
               <Typography color="text.secondary" variant="body2">
-                Responsive project finance operations
+                Financial operations & project tracking
               </Typography>
             </Box>
           </Toolbar>

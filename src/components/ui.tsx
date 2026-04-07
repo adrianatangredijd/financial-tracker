@@ -48,7 +48,7 @@ export function PageHeader({
           letterSpacing="0.18em"
           textTransform="uppercase"
         >
-          Construction Financial Tracker
+          TG Renovation
         </Typography>
         <Typography mt={1} variant="h4">
           {title}

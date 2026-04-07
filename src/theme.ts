@@ -5,29 +5,33 @@ export const navigationWidths = {
   collapsed: 88,
 } as const
 
+const serifStack = '"Times New Roman", Georgia, "Palatino Linotype", serif'
+const sansStack =
+  '"Century Gothic", Futura, "Trebuchet MS", "Questrial", Arial, sans-serif'
+
 export const appTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#0f766e',
-      dark: '#115e59',
-      light: '#14b8a6',
+      main: '#000000',
+      dark: '#000000',
+      light: '#404040',
     },
     secondary: {
-      main: '#2563eb',
+      main: '#404040',
     },
     background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
+      default: '#FFFFFF',
+      paper: '#FFFFFF',
     },
     error: {
-      main: '#dc2626',
+      main: '#b71c1c',
     },
     text: {
-      primary: '#0f172a',
-      secondary: '#475569',
+      primary: '#000000',
+      secondary: '#404040',
     },
-    divider: '#e2e8f0',
+    divider: '#B3B2B2',
   },
   shape: {
     borderRadius: 16,
@@ -43,17 +47,19 @@ export const appTheme = createTheme({
   },
   spacing: 8,
   typography: {
-    fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontFamily: sansStack,
     h4: {
+      fontFamily: serifStack,
       fontWeight: 700,
       letterSpacing: '-0.02em',
     },
     h5: {
+      fontFamily: serifStack,
       fontWeight: 700,
       letterSpacing: '-0.02em',
     },
     h6: {
+      fontFamily: serifStack,
       fontWeight: 600,
     },
     button: {
@@ -69,7 +75,7 @@ export const appTheme = createTheme({
         },
         body: {
           minHeight: '100%',
-          backgroundColor: '#f8fafc',
+          backgroundColor: '#FFFFFF',
         },
         '#root': {
           minHeight: '100vh',
@@ -100,8 +106,8 @@ export const appTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 24,
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 12px 32px rgba(15, 23, 42, 0.08)',
+          border: '1px solid #B3B2B2',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.06)',
         },
       },
     },
@@ -116,7 +122,7 @@ export const appTheme = createTheme({
         },
         subheader: {
           marginTop: 4,
-          color: '#64748b',
+          color: '#404040',
         },
       },
     },
@@ -149,7 +155,7 @@ export const appTheme = createTheme({
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          borderRight: '1px solid #e2e8f0',
+          borderRight: '1px solid #B3B2B2',
         },
       },
     },

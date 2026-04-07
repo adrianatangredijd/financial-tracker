@@ -1,25 +1,99 @@
+import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { Box, CircularProgress } from '@mui/material'
 
 import { AppShell } from '@/components/app-shell'
-import { DashboardPage } from '@/pages/dashboard-page'
-import { JobCostsPage } from '@/pages/job-costs-page'
-import { LogExpensePage } from '@/pages/log-expense-page'
-import { OverheadPage } from '@/pages/overhead-page'
-import { ProjectDetailPage } from '@/pages/project-detail-page'
-import { ProjectsPage } from '@/pages/projects-page'
-import { ProjectionsPage } from '@/pages/projections-page'
+
+const DashboardPage = lazy(() =>
+  import('./pages/dashboard-page').then((m) => ({ default: m.DashboardPage })),
+)
+const LogExpensePage = lazy(() =>
+  import('./pages/log-expense-page').then((m) => ({ default: m.LogExpensePage })),
+)
+const ProjectsPage = lazy(() =>
+  import('./pages/projects-page').then((m) => ({ default: m.ProjectsPage })),
+)
+const ProjectDetailPage = lazy(() =>
+  import('./pages/project-detail-page').then((m) => ({ default: m.ProjectDetailPage })),
+)
+const JobCostsPage = lazy(() =>
+  import('./pages/job-costs-page').then((m) => ({ default: m.JobCostsPage })),
+)
+const OverheadPage = lazy(() =>
+  import('./pages/overhead-page').then((m) => ({ default: m.OverheadPage })),
+)
+const ProjectionsPage = lazy(() =>
+  import('./pages/projections-page').then((m) => ({ default: m.ProjectionsPage })),
+)
+
+function PageFallback() {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <CircularProgress />
+    </Box>
+  )
+}
 
 export function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route element={<DashboardPage />} path="/" />
-        <Route element={<LogExpensePage />} path="/log-expense" />
-        <Route element={<ProjectsPage />} path="/projects" />
-        <Route element={<ProjectDetailPage />} path="/projects/:id" />
-        <Route element={<JobCostsPage />} path="/job-costs" />
-        <Route element={<OverheadPage />} path="/overhead" />
-        <Route element={<ProjectionsPage />} path="/projections" />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <DashboardPage />
+            </Suspense>
+          }
+          path="/"
+        />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <LogExpensePage />
+            </Suspense>
+          }
+          path="/log-expense"
+        />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <ProjectsPage />
+            </Suspense>
+          }
+          path="/projects"
+        />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <ProjectDetailPage />
+            </Suspense>
+          }
+          path="/projects/:id"
+        />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <JobCostsPage />
+            </Suspense>
+          }
+          path="/job-costs"
+        />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <OverheadPage />
+            </Suspense>
+          }
+          path="/overhead"
+        />
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <ProjectionsPage />
+            </Suspense>
+          }
+          path="/projections"
+        />
       </Route>
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>

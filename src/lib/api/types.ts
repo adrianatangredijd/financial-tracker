@@ -55,6 +55,10 @@ export interface DashboardSummary {
   active_project_count: number
   over_budget_projects: number
   average_gross_margin: number
+  total_project_count: number
+  total_job_cost_count: number
+  total_overhead_count: number
+  total_projection_count: number
 }
 
 export interface DashboardProjectProgress {

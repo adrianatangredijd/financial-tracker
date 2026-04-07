@@ -4,13 +4,7 @@ import { BarChart, LineChart } from '@mui/x-charts'
 
 import { MetricCard, PageHeader, SectionCard, StateNotice, TableSkeleton } from '@/components/ui'
 import { getApiErrorMessage } from '@/lib/api/client'
-import {
-  useDashboardQuery,
-  useJobCostsQuery,
-  useOverheadQuery,
-  useProjectsQuery,
-  useProjectionsQuery,
-} from '@/lib/api/hooks'
+import { useDashboardQuery } from '@/lib/api/hooks'
 import type { DashboardProjectMargin } from '@/lib/api/types'
 import { formatCurrency, formatMonthLabel, formatPercent } from '@/lib/utils'
 
@@ -112,18 +106,8 @@ function CommandCenterTable({
 export function DashboardPage() {
   const theme = useTheme()
   const dashboardQuery = useDashboardQuery()
-  const projectsQuery = useProjectsQuery()
-  const jobCostsQuery = useJobCostsQuery()
-  const overheadQuery = useOverheadQuery()
-  const projectionsQuery = useProjectionsQuery()
 
-  if (
-    dashboardQuery.isLoading ||
-    projectsQuery.isLoading ||
-    jobCostsQuery.isLoading ||
-    overheadQuery.isLoading ||
-    projectionsQuery.isLoading
-  ) {
+  if (dashboardQuery.isLoading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack spacing={3}>
@@ -137,25 +121,7 @@ export function DashboardPage() {
     )
   }
 
-  if (
-    dashboardQuery.isError ||
-    projectsQuery.isError ||
-    jobCostsQuery.isError ||
-    overheadQuery.isError ||
-    projectionsQuery.isError ||
-    !dashboardQuery.data ||
-    !projectsQuery.data ||
-    !jobCostsQuery.data ||
-    !overheadQuery.data ||
-    !projectionsQuery.data
-  ) {
-    const error =
-      dashboardQuery.error ??
-      projectsQuery.error ??
-      jobCostsQuery.error ??
-      overheadQuery.error ??
-      projectionsQuery.error
-
+  if (dashboardQuery.isError || !dashboardQuery.data) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack spacing={3}>
@@ -163,17 +129,13 @@ export function DashboardPage() {
             title="Dashboard"
             description="Financial command center for construction cash, project budgets, backlog, and validation."
           />
-          <StateNotice title="Dashboard unavailable" description={getApiErrorMessage(error)} />
+          <StateNotice title="Dashboard unavailable" description={getApiErrorMessage(dashboardQuery.error)} />
         </Stack>
       </Container>
     )
   }
 
   const metrics = dashboardQuery.data
-  const projects = projectsQuery.data
-  const jobCosts = jobCostsQuery.data
-  const overhead = overheadQuery.data
-  const projections = projectionsQuery.data
 
   const revenueExpenseLabels = metrics.revenue_vs_expenses.map((point) => formatMonthLabel(point.month))
   const cashTrendLabels = metrics.cash_flow_trend.map((point) => formatMonthLabel(point.month))
@@ -219,28 +181,28 @@ export function DashboardPage() {
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
               <MetricCard
-                helper={`${projects.length} projects across the portfolio.`}
+                helper={`${metrics.summary.total_project_count} projects across the portfolio.`}
                 label="Current Cash"
                 value={formatCurrency(metrics.summary.current_cash)}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
               <MetricCard
-                helper={`${jobCosts.length} job cost entries posted.`}
+                helper={`${metrics.summary.total_job_cost_count} job cost entries posted.`}
                 label="Gross Profit"
                 value={formatCurrency(metrics.summary.gross_profit)}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
               <MetricCard
-                helper={`${overhead.items.length} overhead entries logged.`}
+                helper={`${metrics.summary.total_overhead_count} overhead entries logged.`}
                 label="Net Profit"
                 value={formatCurrency(metrics.summary.net_profit)}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
               <MetricCard
-                helper={`${projections.length} forecast month(s) loaded.`}
+                helper={`${metrics.summary.total_projection_count} forecast month(s) loaded.`}
                 label="Backlog"
                 value={formatCurrency(metrics.summary.backlog)}
               />

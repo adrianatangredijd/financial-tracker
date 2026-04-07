@@ -78,13 +78,13 @@ export function ComparisonBarChartPanel({
           {
             label: 'Revenue',
             data: data.map((point) => point.revenue),
-            backgroundColor: 'rgba(15, 118, 110, 0.85)',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
             borderRadius: 10,
           },
           {
             label: 'Expenses',
             data: data.map((point) => point.expenses),
-            backgroundColor: 'rgba(217, 119, 6, 0.85)',
+            backgroundColor: 'rgba(64, 64, 64, 0.85)',
             borderRadius: 10,
           },
         ],
@@ -135,8 +135,8 @@ export function LineChartPanel({
           {
             label: title,
             data: data.map((point) => point.amount),
-            borderColor: '#0f766e',
-            backgroundColor: 'rgba(15, 118, 110, 0.15)',
+            borderColor: '#000000',
+            backgroundColor: 'rgba(0, 0, 0, 0.10)',
             fill: true,
             tension: 0.3,
           },
@@ -195,7 +195,7 @@ export function ValueBarChartPanel({
           {
             label: title,
             data: data.map((point) => point.value),
-            backgroundColor: 'rgba(37, 99, 235, 0.82)',
+            backgroundColor: 'rgba(179, 178, 178, 0.82)',
             borderRadius: 10,
           },
         ],
@@ -249,13 +249,13 @@ export function BudgetActualChartPanel({
           {
             label: 'Budget',
             data: data.map((point) => point.budget),
-            backgroundColor: 'rgba(148, 163, 184, 0.9)',
+            backgroundColor: 'rgba(179, 178, 178, 0.5)',
             borderRadius: 10,
           },
           {
             label: 'Actual',
             data: data.map((point) => point.actual),
-            backgroundColor: 'rgba(15, 118, 110, 0.85)',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
             borderRadius: 10,
           },
         ],
