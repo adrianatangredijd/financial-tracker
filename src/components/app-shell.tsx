@@ -27,9 +27,13 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
+import { apiRequest } from '@/lib/api/client'
+import { queryKeys } from '@/lib/api/hooks'
+import type { DashboardMetrics } from '@/lib/api/types'
 import { sidebarItems } from '@/lib/constants'
 import { navigationWidths } from '@/theme'
 
@@ -45,10 +49,18 @@ const icons = {
 export function AppShell() {
   const theme = useTheme()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const isMediumUp = useMediaQuery(theme.breakpoints.up('md'))
   const isLargeUp = useMediaQuery(theme.breakpoints.up('lg'))
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.dashboard,
+      queryFn: () => apiRequest<DashboardMetrics>({ url: '/dashboard' }),
+    })
+  }, [queryClient])
 
   const drawerWidth = useMemo(() => {
     if (!isMediumUp) {
